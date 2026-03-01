@@ -193,45 +193,52 @@ fn qualify_result_debug() {
     assert!(debug.contains("QualifyResult"));
 }
 
-/// Generate a unique temp dir path for tests (avoids parallel test collisions).
-fn unique_temp_dir(prefix: &str) -> std::path::PathBuf {
-    use std::sync::atomic::{AtomicU64, Ordering};
-    static COUNTER: AtomicU64 = AtomicU64::new(0);
-    let id = std::process::id();
-    let seq = COUNTER.fetch_add(1, Ordering::Relaxed);
-    std::env::temp_dir().join(format!("{prefix}-{id}-{seq}"))
-}
-
 /// Helper: write a script that succeeds for given subcommands, fails otherwise.
-fn write_test_script(path: &std::path::Path, succeed_on: &[&str]) {
+/// Returns (`TempDir` guard, script `PathBuf`). The `TempDir` keeps the dir alive.
+#[allow(clippy::expect_used)]
+fn write_test_script(succeed_on: &[&str]) -> (tempfile::TempDir, std::path::PathBuf) {
+    let dir = tempfile::tempdir().expect("create temp dir");
+    let script_path = dir.path().join("fake-forjar.sh");
     let conditions: Vec<String> = succeed_on
         .iter()
         .map(|cmd| format!("[ \"$1\" = \"{cmd}\" ]"))
         .collect();
     let cond_str = conditions.join(" || ");
-    let script = format!(
+    let content = format!(
         "#!/bin/bash\nif {cond_str}; then\n  echo ok\n  exit 0\nelse\n  echo fail\n  exit 1\nfi\n"
     );
-    std::fs::write(path, script).ok();
+    // Write with explicit fsync to ensure visibility under parallel execution.
+    {
+        use std::io::Write;
+        let mut f = std::fs::File::create(&script_path).expect("create script");
+        f.write_all(content.as_bytes()).expect("write script");
+        f.sync_all().expect("sync script");
+    }
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).ok();
+        std::fs::set_permissions(&script_path, std::fs::Permissions::from_mode(0o755))
+            .expect("set permissions");
+        // Sync parent directory so the entry is visible to other threads.
+        let parent = std::fs::File::open(dir.path()).expect("open dir");
+        parent.sync_all().expect("sync dir");
     }
+    (dir, script_path)
 }
 
 #[test]
 fn qualify_stops_on_plan_failure() {
-    let dir = unique_temp_dir("plan-fail");
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).ok();
-    let script = dir.join("fake-forjar-plan");
-    write_test_script(&script, &["validate"]);
+    let (_dir, script) = write_test_script(&["validate"]);
+    let script_path = script.display().to_string();
 
-    let runner = RecipeRunner::new(&script.display().to_string());
+    let runner = RecipeRunner::new(&script_path);
     let result = runner.qualify(Path::new("test.yaml"), Path::new("/tmp/state"));
 
-    assert_eq!(result.validate.exit_code, 0, "validate should succeed");
+    assert_eq!(
+        result.validate.exit_code, 0,
+        "validate should succeed (output: {})",
+        result.validate.output
+    );
     assert!(result.plan.is_some(), "plan should have been attempted");
     assert!(
         result.plan.as_ref().is_some_and(|p| p.exit_code != 0),
@@ -240,22 +247,21 @@ fn qualify_stops_on_plan_failure() {
     assert!(result.first_apply.is_none());
     assert!(result.idempotent_apply.is_none());
     assert!(!result.idempotent);
-
-    let _ = std::fs::remove_dir_all(&dir);
 }
 
 #[test]
 fn qualify_stops_on_apply_failure() {
-    let dir = unique_temp_dir("apply-fail");
-    let _ = std::fs::remove_dir_all(&dir);
-    std::fs::create_dir_all(&dir).ok();
-    let script = dir.join("fake-forjar-apply");
-    write_test_script(&script, &["validate", "plan"]);
+    let (_dir, script) = write_test_script(&["validate", "plan"]);
+    let script_path = script.display().to_string();
 
-    let runner = RecipeRunner::new(&script.display().to_string());
+    let runner = RecipeRunner::new(&script_path);
     let result = runner.qualify(Path::new("test.yaml"), Path::new("/tmp/state"));
 
-    assert_eq!(result.validate.exit_code, 0, "validate should succeed");
+    assert_eq!(
+        result.validate.exit_code, 0,
+        "validate should succeed (output: {})",
+        result.validate.output
+    );
     assert!(
         result.plan.as_ref().is_some_and(|p| p.exit_code == 0),
         "plan should succeed"
@@ -270,6 +276,4 @@ fn qualify_stops_on_apply_failure() {
     );
     assert!(result.idempotent_apply.is_none());
     assert!(!result.idempotent);
-
-    let _ = std::fs::remove_dir_all(&dir);
 }

@@ -9,6 +9,8 @@ rust-version.workspace = true
 description = "Forjar cookbook examples — validate_all, plan_all, idempotency_check"
 
 [dependencies]
+cookbook-qualify.workspace = true
+cookbook-runner.workspace = true
 
 [dev-dependencies]
 
