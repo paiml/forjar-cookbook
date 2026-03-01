@@ -26,10 +26,13 @@ Recipe YAML written
   Timing within budget     <- Performance proven
         |
         v
-  Mark QUALIFIED in CSV    <- cookbook-runner updates CSV
+  ForjarScore computed     <- 8-dimension quality grade
         |
         v
-  cookbook-readme-sync      <- README table regenerated
+  Mark QUALIFIED in CSV    <- cookbook-runner updates CSV + score
+        |
+        v
+  cookbook-readme-sync      <- README table regenerated with grades
 ```
 
 ## When a Recipe Fails
@@ -50,6 +53,17 @@ Every recipe must satisfy:
 - Apply #1: converge from clean state (N changes)
 - Apply #2: re-apply immediately (0 changes, exit 0)
 - State hash #1 == state hash #2
+
+## CLI Commands
+
+```
+cookbook-runner validate --file <recipe.yaml>     # Parse + plan
+cookbook-runner qualify  --file <recipe.yaml>      # Full cycle with scoring
+cookbook-runner score    --file <recipe.yaml>      # Static-only analysis
+```
+
+The `score` command analyzes SAF/OBS/DOC/RES/CMP without running apply.
+The `qualify` command runs the full cycle and computes all 8 dimensions.
 
 ## Forjar Score
 
