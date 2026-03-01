@@ -180,14 +180,21 @@ pub(super) fn score_saf(input: &ScoringInput<'_>, penalties: &mut Vec<Penalty>) 
         }
     }
 
-    // Check for curl|bash in raw YAML
-    if input.raw_yaml.contains("curl") && input.raw_yaml.contains("bash") {
+    // Check for curl|bash piped patterns (not just presence of both words).
+    // Matches: curl ... | bash, curl ... | sh, wget ... | bash
+    let has_pipe_install = input.raw_yaml.lines().any(|line| {
+        let trimmed = line.trim();
+        (trimmed.contains("curl") || trimmed.contains("wget"))
+            && trimmed.contains('|')
+            && (trimmed.contains("bash") || trimmed.contains("| sh"))
+    });
+    if has_pipe_install {
         pts -= 30;
         has_critical = true;
         penalties.push(Penalty {
             dimension: "SAF".to_string(),
             points: 30,
-            reason: "curl|bash pattern detected".to_string(),
+            reason: "curl|bash pipe-install pattern detected".to_string(),
         });
     }
 

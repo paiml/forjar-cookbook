@@ -266,6 +266,41 @@ fn saf_curl_bash_critical() {
     assert!(score <= SAFETY_CRITICAL_CAP);
 }
 
+#[test]
+fn saf_curl_package_and_bash_shell_no_penalty() {
+    let yaml = "\
+version: '1.0'
+name: test-recipe
+resources:
+  pkg:
+    type: package
+    packages:
+      - curl
+      - wget
+    version: '7.88'
+  user:
+    type: file
+    path: /home/ops/.bashrc
+    mode: '0644'
+    owner: ops
+    content: export SHELL=/bin/bash
+";
+    let config = RecipeConfig::from_yaml(yaml).unwrap_or_else(|_| minimal_config());
+    let mut penalties = Vec::new();
+    let input = ScoringInput {
+        status: &RecipeStatus::Qualified,
+        idempotency_class: &IdempotencyClass::Strong,
+        config: &config,
+        raw_yaml: yaml,
+        budget_ms: 0,
+        runtime: None,
+    };
+    let score = score_saf(&input, &mut penalties);
+    // No curl|bash pipe penalty — curl is a package, bash is a shell path
+    assert_eq!(score, 100);
+    assert!(penalties.is_empty());
+}
+
 // ── DOC scoring ──────────────────────────────────────────────────
 
 const SAMPLE_YAML: &str = "\
