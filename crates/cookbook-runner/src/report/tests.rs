@@ -225,3 +225,56 @@ fn verdict_clone_eq() {
     let v2 = v.clone();
     assert_eq!(v, v2);
 }
+
+// --- format_score_report tests ---
+
+#[test]
+fn score_report_shows_grade() {
+    let score = cookbook_qualify::ForjarScore {
+        composite: 83,
+        grade: cookbook_qualify::Grade::B,
+        dimensions: cookbook_qualify::DimensionScores {
+            cor: 100,
+            idm: 100,
+            prf: 85,
+            saf: 82,
+            obs: 60,
+            doc: 90,
+            res: 50,
+            cmp: 35,
+        },
+        penalties: vec![],
+        version: "1.0".to_string(),
+    };
+    let report = format_score_report(&score);
+    assert!(report.contains("score: 83 (grade B)"));
+    assert!(report.contains("COR=100"));
+    assert!(report.contains("CMP= 35"));
+}
+
+#[test]
+fn score_report_shows_penalties() {
+    let score = cookbook_qualify::ForjarScore {
+        composite: 70,
+        grade: cookbook_qualify::Grade::C,
+        dimensions: cookbook_qualify::DimensionScores {
+            cor: 94,
+            idm: 80,
+            prf: 60,
+            saf: 70,
+            obs: 40,
+            doc: 50,
+            res: 30,
+            cmp: 20,
+        },
+        penalties: vec![cookbook_qualify::Penalty {
+            dimension: "SAF".to_string(),
+            points: 5,
+            reason: "file without explicit mode".to_string(),
+        }],
+        version: "1.0".to_string(),
+    };
+    let report = format_score_report(&score);
+    assert!(report.contains("penalties: 1"));
+    assert!(report.contains("-5 SAF: file without explicit mode"));
+}

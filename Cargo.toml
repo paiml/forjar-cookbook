@@ -28,6 +28,9 @@ thiserror = "2.0"
 # CSV parsing
 csv = "1.3"
 
+# YAML parsing (lightweight, for scoring)
+serde_yaml_ng = "0.9"
+
 # Regex
 regex = "1.11"
 

@@ -1,6 +1,7 @@
 //! Qualification report formatting and verdict logic.
 
 use crate::QualifyResult;
+use cookbook_qualify::ForjarScore;
 use std::path::Path;
 
 /// Verdict from a full qualification cycle.
@@ -106,6 +107,33 @@ pub fn format_qualify_report(file: &Path, result: &QualifyResult) -> String {
         lines.push(format!("FAILED: {msg}"));
     }
 
+    lines.join("\n")
+}
+
+/// Format a Forjar Score breakdown for inclusion in reports.
+#[must_use]
+pub fn format_score_report(score: &ForjarScore) -> String {
+    let d = &score.dimensions;
+    let mut lines = Vec::new();
+    lines.push(format!(
+        "  score: {} (grade {})",
+        score.composite,
+        score.grade.as_str()
+    ));
+    lines.push(format!(
+        "    COR={:>3}  IDM={:>3}  PRF={:>3}  SAF={:>3}",
+        d.cor, d.idm, d.prf, d.saf
+    ));
+    lines.push(format!(
+        "    OBS={:>3}  DOC={:>3}  RES={:>3}  CMP={:>3}",
+        d.obs, d.doc, d.res, d.cmp
+    ));
+    if !score.penalties.is_empty() {
+        lines.push(format!("    penalties: {}", score.penalties.len()));
+        for p in &score.penalties {
+            lines.push(format!("      -{} {}: {}", p.points, p.dimension, p.reason));
+        }
+    }
     lines.join("\n")
 }
 

@@ -130,8 +130,21 @@ fn recipe_qualification_serde_roundtrip() {
         blocker_description: String::new(),
         last_qualified: "2026-03-01".to_string(),
         qualified_by: "cookbook-runner".to_string(),
+        score: 83,
+        grade: "B".to_string(),
+        cor: 100,
+        idm: 100,
+        prf: 85,
+        saf: 82,
+        obs: 60,
+        doc: 90,
+        res: 50,
+        cmp: 35,
+        score_version: "1.0".to_string(),
     };
     let json = serde_json::to_string(&qual).unwrap_or_default();
     assert!(json.contains("developer-workstation"));
     assert!(json.contains("qualified"));
+    assert!(json.contains("\"score\":83"));
+    assert!(json.contains("\"grade\":\"B\""));
 }

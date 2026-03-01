@@ -5,10 +5,15 @@
 //! table between HTML comment markers.
 
 mod qualify;
+pub mod score;
 mod sync;
 mod table;
 
 pub use qualify::{IdempotencyClass, RecipeQualification, RecipeStatus};
+pub use score::{
+    DimensionScores, ForjarScore, Grade, Penalty, RecipeConfig, RuntimeData, SCORE_VERSION,
+    ScoringInput,
+};
 pub use sync::sync_readme;
 pub use table::{
     END_MARKER, START_MARKER, generate_summary, generate_table, parse_csv, update_readme, write_csv,

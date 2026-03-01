@@ -115,6 +115,28 @@ pub struct RecipeQualification {
     pub last_qualified: String,
     /// Qualified by (agent name, empty if never).
     pub qualified_by: String,
+    /// Forjar composite score (0–100, 0 = not scored).
+    pub score: u32,
+    /// Letter grade (A/B/C/D/F, empty = not scored).
+    pub grade: String,
+    /// Correctness dimension (0–100).
+    pub cor: u32,
+    /// Idempotency dimension (0–100).
+    pub idm: u32,
+    /// Performance dimension (0–100).
+    pub prf: u32,
+    /// Safety dimension (0–100).
+    pub saf: u32,
+    /// Observability dimension (0–100).
+    pub obs: u32,
+    /// Documentation dimension (0–100).
+    pub doc: u32,
+    /// Resilience dimension (0–100).
+    pub res: u32,
+    /// Composability dimension (0–100).
+    pub cmp: u32,
+    /// Scoring algorithm version (e.g., "1.0", empty = not scored).
+    pub score_version: String,
 }
 
 #[cfg(test)]
