@@ -1,8 +1,8 @@
-# Shared notification hooks for forjar-cookbook recipes
-# Included by all recipes for consistent alerting
+# Shared metadata params for forjar-cookbook recipes
+# Included by all recipes for consistent labeling
+version: '1.0'
+name: notify-hooks
 
-policy:
-  notify:
-    on_success: "echo 'Recipe completed successfully'"
-    on_failure: "echo 'Recipe apply failed'"
-    on_drift: "echo 'Configuration drift detected'"
+params:
+  forjar_cookbook: "true"
+  forjar_cookbook_version: "1.0"
