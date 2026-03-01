@@ -274,7 +274,7 @@ pub(super) fn score_obs(input: &ScoringInput<'_>) -> u32 {
     // Notify hooks
     if let Some(notify) = input.config.eff_notify() {
         if let Some(map) = notify.as_mapping() {
-            let hook_count = ["success", "failure", "drift"]
+            let hook_count = ["on_success", "on_failure", "on_drift"]
                 .iter()
                 .filter(|k| {
                     map.get(serde_yaml_ng::Value::String((**k).to_owned()))

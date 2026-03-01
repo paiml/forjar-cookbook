@@ -223,9 +223,9 @@ fn obs_with_notify_hooks() {
 version: '1.0'
 name: test-recipe
 notify:
-  success: slack://channel
-  failure: email://admin
-  drift: webhook://url
+  on_success: slack://channel
+  on_failure: email://admin
+  on_drift: webhook://url
 resources: {}
 ";
     let config = RecipeConfig::from_yaml(yaml).unwrap_or_else(|_| minimal_config());
