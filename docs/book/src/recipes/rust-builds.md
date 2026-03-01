@@ -37,7 +37,7 @@ Docker multi-stage builds without Docker.
 **Resources**: build-deps (package), rust-toolchain (file),
 compile (file), checksum (file), deploy-binary (file), verify-deploy (file)
 
-**Tier**: 1+2 | **Idempotency**: Strong | **Grade**: Pending qualification
+**Tier**: 1+2 | **Idempotency**: Strong | **Grade**: A
 
 ## #19 Cross-Compilation
 
