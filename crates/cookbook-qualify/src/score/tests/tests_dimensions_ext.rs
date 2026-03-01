@@ -181,7 +181,8 @@ fn obs_empty_config_is_zero() {
         budget_ms: 0,
         runtime: None,
     };
-    assert_eq!(score_obs(&input), 0);
+    // No tripwire/lock/outputs, no files → full mode/owner credit (30)
+    assert_eq!(score_obs(&input), 30);
 }
 
 #[test]
@@ -236,8 +237,8 @@ resources: {}
         runtime: None,
     };
     let score = score_obs(&input);
-    // No tripwire/lock/outputs, no files → 0 + notify 3/3: 20pts = 20
-    assert_eq!(score, 20);
+    // No tripwire/lock/outputs, no files → 30 (mode/owner credit) + notify 3/3: 20 = 50
+    assert_eq!(score, 50);
 }
 
 #[test]

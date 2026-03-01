@@ -248,7 +248,10 @@ pub(super) fn score_obs(input: &ScoringInput<'_>) -> u32 {
         .filter(|v| resource_str(v, "type").as_deref() == Some("file"))
         .collect();
 
-    if !file_resources.is_empty() {
+    if file_resources.is_empty() {
+        // No file resources — full credit (no mode/owner to set)
+        pts += 30;
+    } else {
         let with_mode = file_resources
             .iter()
             .filter(|v| resource_str(v, "mode").is_some())

@@ -5,8 +5,8 @@ recipe_num,name,category,status,tier,idempotency_class,first_apply_ms,idempotent
 4,monitoring-stack,infra,qualified,2+3,weak,9158,429,,,2026-03-01,cookbook-runner,93,A,100,90,100,100,90,80,80,85,1.0
 5,redis-cache,infra,qualified,2+3,weak,9108,382,,,2026-03-01,cookbook-runner,93,A,100,90,100,100,90,80,80,85,1.0
 6,ci-runner,infra,qualified,3,strong,8141,363,,,2026-03-01,cookbook-runner,94,A,100,100,100,94,90,80,80,85,1.0
-7,rocm-gpu,gpu,blocked,3,strong,,,FJ-1126,ROCm userspace not installed,,,,F,,,,97,60,80,80,85,1.0
-8,nvidia-gpu,gpu,blocked,3,strong,,,FJ-1127,No NVIDIA hardware,,,,F,,,,97,60,80,80,85,1.0
+7,rocm-gpu,gpu,blocked,3,strong,,,FJ-1126,ROCm userspace not installed,,,,F,,,,97,90,80,80,85,1.0
+8,nvidia-gpu,gpu,blocked,3,strong,,,FJ-1127,No NVIDIA hardware,,,,F,,,,97,90,80,80,85,1.0
 9,secure-baseline,infra,qualified,2+3,strong,36834,355,,,2026-03-01,cookbook-runner,93,A,100,100,90,97,90,80,80,85,1.0
 10,nfs-file-server,infra,blocked,3,strong,,,FJ-1128,NFS kernel modules not loaded,,,,F,,,,97,90,80,80,85,1.0
 11,dev-shell,nix,qualified,1+2,strong,714,22,,,2026-03-01,cookbook-runner,94,A,100,100,100,97,90,80,80,85,1.0

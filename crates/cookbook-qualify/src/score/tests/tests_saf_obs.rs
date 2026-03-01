@@ -152,3 +152,37 @@ outputs:
     // tripwire: +15, lock_file: +15, outputs: +10, mode 100%: +15, owner 100%: +15 = 70
     assert_eq!(score, 70);
 }
+
+#[test]
+fn obs_no_file_resources_full_mode_owner_credit() {
+    let yaml = "\
+version: '1.0'
+name: test-recipe
+resources:
+  gpu:
+    type: gpu
+    backend: rocm
+policy:
+  tripwire: true
+  lock_file: true
+  notify:
+    on_success: echo ok
+    on_failure: echo fail
+    on_drift: echo drift
+outputs:
+  backend:
+    value: rocm
+";
+    let config = RecipeConfig::from_yaml(yaml).unwrap_or_else(|_| minimal_config());
+    let input = ScoringInput {
+        status: &RecipeStatus::Qualified,
+        idempotency_class: &IdempotencyClass::Strong,
+        config: &config,
+        raw_yaml: yaml,
+        budget_ms: 0,
+        runtime: None,
+    };
+    let score = score_obs(&input);
+    // tripwire(15) + lock(15) + outputs(10) + no-files bonus(30) + notify(20) = 90
+    assert_eq!(score, 90);
+}
