@@ -2,6 +2,7 @@
 //! composite calculations, and type roundtrips.
 
 mod tests_dimensions;
+mod tests_dimensions_ext;
 
 use super::*;
 use crate::qualify::{IdempotencyClass, RecipeStatus};
