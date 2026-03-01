@@ -16,6 +16,7 @@ recipe_num,name,category,status,tier,idempotency_class,first_apply_ms,idempotent
 15,workspace,nix,qualified,1+2,strong,1313,25,,,2026-03-01,cookbook-runner,93,A,100,100,100,91,90,80,80,85,1.0
 16,rust-release,rust,qualified,1+2,strong,712,22,,,2026-03-01,cookbook-runner,94,A,100,100,100,97,90,80,80,85,1.0
 17,static-musl,rust,qualified,1+2,strong,906,22,,,2026-03-01,cookbook-runner,94,A,100,100,100,97,90,80,80,85,1.0
+18,multi-stage-build,rust,pending,1+2,strong,,,,,,,,F,,,,97,90,80,80,95,1.0
 19,cross-compile,rust,qualified,1+2,strong,1150,22,,,2026-03-01,cookbook-runner,94,A,100,100,100,97,90,80,80,85,1.0
 20,sovereign-stack,advanced,qualified,2+3,strong,1197,21,,,2026-03-01,cookbook-runner,94,A,100,100,100,97,90,80,80,85,1.0
 21,apr-model,advanced,qualified,3,weak,1502,24,,,2026-03-01,cookbook-runner,93,A,100,90,100,100,90,80,80,85,1.0

@@ -27,6 +27,18 @@ build-script (file)
 
 **Tier**: 2+3 | **Idempotency**: Strong | **Grade**: A
 
+## #18 Multi-Stage Build
+
+Multi-stage build pipeline: compile in an isolated builder environment,
+extract only the binary, deploy to a separate target machine. The deploy
+target never sees compilers, build deps, or intermediate artifacts.
+Docker multi-stage builds without Docker.
+
+**Resources**: build-deps (package), rust-toolchain (file),
+compile (file), checksum (file), deploy-binary (file), verify-deploy (file)
+
+**Tier**: 1+2 | **Idempotency**: Strong | **Grade**: Pending qualification
+
 ## #19 Cross-Compilation
 
 Cross-compile Rust binaries for different target architectures
