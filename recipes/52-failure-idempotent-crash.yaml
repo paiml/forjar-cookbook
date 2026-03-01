@@ -12,6 +12,11 @@ version: '1.0'
 name: failure-idempotent-crash
 description: "Failure mode test: clean convergence after interrupted or updated apply"
 
+params:
+  test_dir: /tmp/crash-test
+  test_name: idempotent-crash
+  config_version: "2"
+
 machines:
   target:
     hostname: target
@@ -32,7 +37,7 @@ resources:
     type: file
     machine: target
     state: directory
-    path: /tmp/crash-test
+    path: "{{params.test_dir}}"
     owner: root
     mode: '0755'
     tags: [failure-test, crash]
@@ -42,14 +47,14 @@ resources:
   app-config:
     type: file
     machine: target
-    path: /tmp/crash-test/config.yaml
+    path: "{{params.test_dir}}/config.yaml"
     owner: root
     mode: '0644'
     content: |
-      # Managed by forjar — crash resilience test (version 2)
+      # Managed by forjar — crash resilience test (version {{params.config_version}})
       # Previous version had: version: 1, workers: 2
-      # After "crash" and config update, forjar must converge to v2
-      version: 2
+      # After "crash" and config update, forjar must converge to v{{params.config_version}}
+      version: {{params.config_version}}
       workers: 4
       port: 8080
       crash_test: true
@@ -61,12 +66,12 @@ resources:
   app-data:
     type: file
     machine: target
-    path: /tmp/crash-test/data.json
+    path: "{{params.test_dir}}/data.json"
     owner: root
     mode: '0644'
     content: |
       {
-        "version": 2,
+        "version": {{params.config_version}},
         "migrated": true,
         "stale_state": false,
         "note": "If stale state leaked from v1, this file would have version: 1"
@@ -78,7 +83,7 @@ resources:
   crash-manifest:
     type: file
     machine: target
-    path: /tmp/crash-test/crash-manifest.json
+    path: "{{params.test_dir}}/crash-manifest.json"
     owner: root
     mode: '0644'
     content: |

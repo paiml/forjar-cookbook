@@ -11,6 +11,10 @@ version: '1.0'
 name: failure-partial-apply
 description: "Failure mode test: partial apply with dependency skip"
 
+params:
+  test_dir: /tmp/forjar-test
+  test_name: partial-apply
+
 machines:
   target:
     hostname: target
@@ -31,10 +35,10 @@ resources:
   good-file-1:
     type: file
     machine: target
-    path: /tmp/forjar-test/good1.txt
+    path: "{{params.test_dir}}/good1.txt"
     owner: root
     mode: '0644'
-    content: "success — resource 1"
+    content: "success — resource 1 ({{params.test_name}})"
     tags: [failure-test, success]
     resource_group: partial-apply
 
@@ -42,10 +46,10 @@ resources:
   good-file-2:
     type: file
     machine: target
-    path: /tmp/forjar-test/good2.txt
+    path: "{{params.test_dir}}/good2.txt"
     owner: root
     mode: '0644'
-    content: "success — resource 2"
+    content: "success — resource 2 ({{params.test_name}})"
     depends_on: [good-file-1]
     tags: [failure-test, success]
     resource_group: partial-apply
@@ -54,10 +58,10 @@ resources:
   good-file-3:
     type: file
     machine: target
-    path: /tmp/forjar-test/good3.txt
+    path: "{{params.test_dir}}/good3.txt"
     owner: root
     mode: '0644'
-    content: "success — resource 3"
+    content: "success — resource 3 ({{params.test_name}})"
     depends_on: [good-file-2]
     tags: [failure-test, success]
     resource_group: partial-apply
@@ -66,7 +70,7 @@ resources:
   failure-manifest:
     type: file
     machine: target
-    path: /tmp/forjar-test/failure-manifest.json
+    path: "{{params.test_dir}}/failure-manifest.json"
     owner: root
     mode: '0644'
     content: |

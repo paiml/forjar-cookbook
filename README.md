@@ -40,7 +40,7 @@ make update-qualifications
 ## Qualification Dashboard
 
 <!-- QUALIFICATION_TABLE_START -->
-**Qualification Summary** (updated: 2026-03-01 16:59 UTC)
+**Qualification Summary** (updated: 2026-03-01 17:04 UTC)
 
 | Status | Count |
 |--------|-------|
@@ -54,8 +54,8 @@ make update-qualifications
 |-------|-------|
 | A | 0 |
 | B | 0 |
-| C | 52 |
-| D | 4 |
+| C | 56 |
+| D | 0 |
 | F | 5 |
 
 | # | Recipe | Category | Status | Grade | Tier | Idempotent | Time (1st) | Time (2nd) | Score | Blocker |
@@ -99,7 +99,7 @@ make update-qualifications
 | 38 | state-encryption | opentofu | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 1+2 | Strong | 968ms | 22ms | 88 | — |
 | 39 | cross-config | opentofu | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 1+2 | Strong | 736ms | 23ms | 88 | — |
 | 40 | scheduled-tasks | linux | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 1.2s | 21ms | 87 | — |
-| 41 | user-group-provisioning | linux | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![D](https://img.shields.io/badge/D-orange) | 2+3 | Strong | 1.4s | 22ms | 81 | — |
+| 41 | user-provisioning | linux | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 375ms | 22ms | 86 | — |
 | 42 | kernel-tuning | linux | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 910ms | 20ms | 86 | — |
 | 43 | log-management | linux | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 1.0s | 22ms | 86 | — |
 | 44 | time-sync | linux | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 810ms | 21ms | 87 | — |
@@ -108,9 +108,9 @@ make update-qualifications
 | 47 | automated-patching | linux | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 988ms | 21ms | 87 | — |
 | 48 | hostname-locale-dns | linux | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 1.0s | 19ms | 85 | — |
 | 49 | swap-memory | linux | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 3 | Weak | 711ms | 22ms | 87 | — |
-| 50 | failure-partial-apply | failure | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![D](https://img.shields.io/badge/D-orange) | 2+3 | Strong | 720ms | 21ms | 87 | — |
-| 51 | failure-state-recovery | failure | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![D](https://img.shields.io/badge/D-orange) | 2+3 | Strong | 859ms | 23ms | 86 | — |
-| 52 | failure-idempotent-crash | failure | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![D](https://img.shields.io/badge/D-orange) | 2+3 | Strong | 674ms | 22ms | 87 | — |
+| 50 | failure-partial-apply | failure | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 788ms | 23ms | 88 | — |
+| 51 | failure-state-recovery | failure | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 936ms | 24ms | 87 | — |
+| 52 | failure-idempotent-crash | failure | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 695ms | 22ms | 88 | — |
 | 53 | stack-dev-server | composability | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 1.1s | 23ms | 78 | — |
 | 54 | stack-web-production | composability | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 1.3s | 22ms | 88 | — |
 | 55 | stack-gpu-lab | composability | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 3 | Strong | 1.1s | 21ms | 87 | — |

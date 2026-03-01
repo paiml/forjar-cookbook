@@ -11,6 +11,10 @@ version: '1.0'
 name: failure-state-recovery
 description: "Failure mode test: state lock deletion recovery with full re-convergence"
 
+params:
+  test_dir: /tmp/recovery-test
+  test_name: state-recovery
+
 machines:
   target:
     hostname: target
@@ -31,7 +35,7 @@ resources:
     type: file
     machine: target
     state: directory
-    path: /tmp/recovery-test
+    path: "{{params.test_dir}}"
     owner: root
     mode: '0755'
     tags: [failure-test, recovery]
@@ -40,10 +44,10 @@ resources:
   file-a:
     type: file
     machine: target
-    path: /tmp/recovery-test/file-a.txt
+    path: "{{params.test_dir}}/file-a.txt"
     owner: root
     mode: '0644'
-    content: "file-a-content — state recovery test"
+    content: "file-a-content — {{params.test_name}} test"
     depends_on: [recovery-dir]
     tags: [failure-test, recovery]
     resource_group: recovery
@@ -51,10 +55,10 @@ resources:
   file-b:
     type: file
     machine: target
-    path: /tmp/recovery-test/file-b.txt
+    path: "{{params.test_dir}}/file-b.txt"
     owner: root
     mode: '0644'
-    content: "file-b-content — state recovery test"
+    content: "file-b-content — {{params.test_name}} test"
     depends_on: [file-a]
     tags: [failure-test, recovery]
     resource_group: recovery
@@ -62,7 +66,7 @@ resources:
   file-c:
     type: file
     machine: target
-    path: /tmp/recovery-test/file-c.txt
+    path: "{{params.test_dir}}/file-c.txt"
     owner: root
     mode: '0644'
     content: "file-c-content — depends on both a and b"
@@ -73,7 +77,7 @@ resources:
   recovery-manifest:
     type: file
     machine: target
-    path: /tmp/recovery-test/recovery-manifest.json
+    path: "{{params.test_dir}}/recovery-manifest.json"
     owner: root
     mode: '0644'
     content: |
