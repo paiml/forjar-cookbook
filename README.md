@@ -40,23 +40,23 @@ make update-qualifications
 ## Qualification Dashboard
 
 <!-- QUALIFICATION_TABLE_START -->
-**Qualification Summary** (updated: 2026-03-01 23:21 UTC)
+**Qualification Summary** (updated: 2026-03-01 23:23 UTC)
 
 | Status | Count |
 |--------|-------|
-| Qualified | 56 |
+| Qualified | 57 |
 | Blocked   | 5 |
-| Pending   | 1 |
+| Pending   | 0 |
 
 **Grade Distribution**
 
 | Grade | Count |
 |-------|-------|
-| A | 56 |
+| A | 57 |
 | B | 0 |
 | C | 0 |
 | D | 0 |
-| F | 6 |
+| F | 5 |
 
 | # | Recipe | Category | Status | Grade | Tier | Idempotent | Time (1st) | Time (2nd) | Score | Blocker |
 |---|--------|----------|--------|-------|------|------------|------------|------------|-------|---------|
@@ -77,7 +77,7 @@ make update-qualifications
 | 15 | workspace | nix | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![A](https://img.shields.io/badge/A-brightgreen) | 1+2 | Strong | 1.3s | 25ms | 93 | — |
 | 16 | rust-release | rust | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![A](https://img.shields.io/badge/A-brightgreen) | 1+2 | Strong | 712ms | 22ms | 94 | — |
 | 17 | static-musl | rust | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![A](https://img.shields.io/badge/A-brightgreen) | 1+2 | Strong | 906ms | 22ms | 94 | — |
-| 18 | multi-stage-build | rust | ![pending](https://img.shields.io/badge/PENDING-lightgray) | ![F](https://img.shields.io/badge/F-red) | 1+2 | Strong | — | — | 0 | — |
+| 18 | multi-stage-build | rust | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![A](https://img.shields.io/badge/A-brightgreen) | 1+2 | Strong | 6.9s | 36ms | 95 | — |
 | 19 | cross-compile | rust | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![A](https://img.shields.io/badge/A-brightgreen) | 1+2 | Strong | 1.1s | 22ms | 94 | — |
 | 20 | sovereign-stack | advanced | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![A](https://img.shields.io/badge/A-brightgreen) | 2+3 | Strong | 1.2s | 21ms | 94 | — |
 | 21 | apr-model | advanced | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![A](https://img.shields.io/badge/A-brightgreen) | 3 | Weak | 1.5s | 24ms | 93 | — |
