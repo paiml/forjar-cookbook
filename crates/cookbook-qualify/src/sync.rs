@@ -1,7 +1,7 @@
 //! README sync logic — extracted from main.rs for testability.
 
 use crate::{generate_summary, generate_table, parse_csv, update_readme};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// Sync the README qualification table from a CSV file.
 ///
@@ -47,6 +47,44 @@ pub struct SyncResult {
     pub total: usize,
     /// Number of qualified recipes.
     pub qualified: usize,
+}
+
+/// Find the cookbook project root by walking up from the current directory.
+///
+/// Looks for a directory containing both `Cargo.toml` and `docs/certifications/`.
+///
+/// # Errors
+///
+/// Returns error if the root cannot be found.
+pub fn find_project_root() -> Result<PathBuf, String> {
+    let mut dir = std::env::current_dir().map_err(|e| format!("cwd: {e}"))?;
+    loop {
+        if dir.join("Cargo.toml").exists() && dir.join("docs/certifications").exists() {
+            return Ok(dir);
+        }
+        if !dir.pop() {
+            return Err("could not find project root (Cargo.toml + docs/certifications/)".into());
+        }
+    }
+}
+
+/// Run the full README sync from the project root.
+///
+/// Finds the project root, locates the CSV and README, syncs them,
+/// and returns the result.
+///
+/// # Errors
+///
+/// Returns error if the project root cannot be found, or if sync fails.
+pub fn run_readme_sync() -> Result<(PathBuf, SyncResult), String> {
+    let root = find_project_root()?;
+    let csv_path = root.join("docs/certifications/recipes.csv");
+    let readme_path = root.join("README.md");
+
+    let timestamp = chrono::Utc::now().format("%Y-%m-%d %H:%M UTC").to_string();
+    let result = sync_readme(&csv_path, &readme_path, &timestamp)?;
+
+    Ok((readme_path, result))
 }
 
 #[cfg(test)]

@@ -46,10 +46,11 @@ coverage-summary:
 coverage-check:
 	@./scripts/coverage-check.sh
 
-# Run examples (validate + plan all recipes)
+# Run examples (validate + plan + score all recipes)
 examples:
 	cargo run --example validate_all
 	cargo run --example plan_all
+	cargo run --example score_all
 
 # Documentation consistency check
 docs-check:
