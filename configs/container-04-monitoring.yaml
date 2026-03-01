@@ -1,12 +1,15 @@
-# Container variant: 04-monitoring-stack
+# Recipe: container-04-monitoring
 # Tier: 2 (container-only)
-# Stripped: service management, network listeners
+# Idempotency: strong
 #
 # Installs monitoring packages and creates configuration directories.
 
 version: '1.0'
 name: container-04-monitoring
 description: "Container test: monitoring packages and config directories"
+
+params:
+  scrape_interval: 15s
 
 machines:
   monitor:
@@ -29,16 +32,20 @@ resources:
     machine: monitor
     provider: apt
     packages:
-      - curl
       - jq
+    tags: [monitoring, packages]
+    resource_group: packages
 
   prometheus-dir:
     type: file
     machine: monitor
     state: directory
     path: /etc/prometheus
+    owner: root
     mode: '0755'
     depends_on: [monitoring-packages]
+    tags: [monitoring, prometheus]
+    resource_group: prometheus
 
   prometheus-config:
     type: file
@@ -47,18 +54,41 @@ resources:
     content: |
       # Managed by forjar — monitoring-stack recipe
       global:
-        scrape_interval: 15s
-        evaluation_interval: 15s
+        scrape_interval: {{params.scrape_interval}}
+        evaluation_interval: {{params.scrape_interval}}
       scrape_configs:
         - job_name: 'node'
           static_configs:
             - targets: ['localhost:9100']
+    owner: root
     mode: '0644'
     depends_on: [prometheus-dir]
+    tags: [monitoring, prometheus]
+    resource_group: prometheus
 
   grafana-dir:
     type: file
     machine: monitor
     state: directory
     path: /etc/grafana
+    owner: root
     mode: '0755'
+    tags: [monitoring, grafana]
+    resource_group: grafana
+
+policy:
+  failure: continue_independent
+  tripwire: true
+  lock_file: true
+  ssh_retries: 3
+  pre_apply: "echo 'Applying monitoring config'"
+  post_apply: "echo 'Monitoring configured'"
+  notify:
+    on_success: "echo 'Monitoring stack ready'"
+    on_failure: "echo 'Monitoring setup failed'"
+    on_drift: "echo 'Monitoring config drifted'"
+
+outputs:
+  scrape_interval:
+    value: "{{params.scrape_interval}}"
+    description: "Prometheus scrape interval"

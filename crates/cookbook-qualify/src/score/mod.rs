@@ -4,9 +4,11 @@
 //! a letter grade (A–F). Designed so A-grade requires >= 80 in every
 //! dimension — no gaming by overperforming in easy dimensions.
 
+mod config;
 mod dimensions;
 
 use crate::qualify::{IdempotencyClass, RecipeStatus};
+pub use config::{PolicyConfig, RecipeConfig};
 use dimensions::{
     score_cmp, score_cor, score_doc, score_idm, score_obs, score_prf, score_res, score_saf,
 };
@@ -181,108 +183,6 @@ pub struct RuntimeData {
     pub state_lock_written: bool,
     /// Whether all resources converged.
     pub all_resources_converged: bool,
-}
-
-// ── Lightweight recipe config parser ─────────────────────────────
-
-/// Lightweight recipe config for static analysis scoring.
-/// Parsed from YAML without depending on the forjar crate.
-#[derive(Debug, Clone, Deserialize)]
-pub struct RecipeConfig {
-    /// Recipe name.
-    #[serde(default)]
-    pub name: String,
-    /// Recipe version.
-    #[serde(default)]
-    pub version: String,
-    /// Description field.
-    #[serde(default)]
-    pub description: Option<String>,
-    /// Machines map.
-    #[serde(default)]
-    pub machines: std::collections::HashMap<String, serde_yaml_ng::Value>,
-    /// Resources map.
-    #[serde(default)]
-    pub resources: std::collections::HashMap<String, serde_yaml_ng::Value>,
-    /// Params with defaults.
-    #[serde(default)]
-    pub params: Option<serde_yaml_ng::Value>,
-    /// Failure policy.
-    #[serde(default)]
-    pub failure: Option<String>,
-    /// Outputs section.
-    #[serde(default)]
-    pub outputs: Option<serde_yaml_ng::Value>,
-    /// Tripwire policy.
-    #[serde(default)]
-    pub tripwire: Option<serde_yaml_ng::Value>,
-    /// Includes.
-    #[serde(default)]
-    pub includes: Option<Vec<String>>,
-    /// Pre-apply hook.
-    #[serde(default)]
-    pub pre_apply: Option<String>,
-    /// Post-apply hook.
-    #[serde(default)]
-    pub post_apply: Option<String>,
-    /// Notify hooks.
-    #[serde(default)]
-    pub notify: Option<serde_yaml_ng::Value>,
-    /// SSH retries.
-    #[serde(default)]
-    pub ssh_retries: Option<u32>,
-    /// Lock file config.
-    #[serde(default)]
-    pub lock_file: Option<String>,
-}
-
-impl RecipeConfig {
-    /// Parse from YAML string.
-    ///
-    /// # Errors
-    ///
-    /// Returns error if YAML is invalid.
-    pub fn from_yaml(yaml: &str) -> Result<Self, String> {
-        serde_yaml_ng::from_str(yaml).map_err(|e| format!("YAML parse error: {e}"))
-    }
-}
-
-// ── Static analysis helpers ──────────────────────────────────────
-
-/// Extract resource field as string from a YAML value.
-fn resource_str(val: &serde_yaml_ng::Value, key: &str) -> Option<String> {
-    val.as_mapping()
-        .and_then(|m| m.get(serde_yaml_ng::Value::String(key.to_string())))
-        .and_then(serde_yaml_ng::Value::as_str)
-        .map(String::from)
-}
-
-/// Check if a resource has a `depends_on` field.
-fn has_depends_on(val: &serde_yaml_ng::Value) -> bool {
-    val.as_mapping()
-        .and_then(|m| m.get(serde_yaml_ng::Value::String("depends_on".to_string())))
-        .is_some()
-}
-
-/// Check if a resource has tags.
-fn has_tags(val: &serde_yaml_ng::Value) -> bool {
-    val.as_mapping()
-        .and_then(|m| m.get(serde_yaml_ng::Value::String("tags".to_string())))
-        .is_some()
-}
-
-/// Check if a resource has a `template` field.
-fn has_template(val: &serde_yaml_ng::Value) -> bool {
-    val.as_mapping()
-        .and_then(|m| m.get(serde_yaml_ng::Value::String("template".to_string())))
-        .is_some()
-}
-
-/// Check if a resource has a `resource_group` field.
-fn has_resource_group(val: &serde_yaml_ng::Value) -> bool {
-    val.as_mapping()
-        .and_then(|m| m.get(serde_yaml_ng::Value::String("resource_group".to_string())))
-        .is_some()
 }
 
 // ── Scoring input ────────────────────────────────────────────────

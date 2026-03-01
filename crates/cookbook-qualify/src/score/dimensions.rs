@@ -1,9 +1,7 @@
 //! Per-dimension scoring functions for the 8 Forjar Score dimensions.
 
-use super::{
-    IdempotencyClass, MAX_POINTS, Penalty, SAFETY_CRITICAL_CAP, ScoringInput, has_depends_on,
-    has_resource_group, has_tags, has_template, resource_str,
-};
+use super::config::{has_depends_on, has_resource_group, has_tags, has_template, resource_str};
+use super::{IdempotencyClass, MAX_POINTS, Penalty, SAFETY_CRITICAL_CAP, ScoringInput};
 
 /// Clamp a signed score to 0–100.
 pub(super) fn clamp_score(pts: i32) -> u32 {
@@ -225,10 +223,10 @@ pub(super) fn score_saf(input: &ScoringInput<'_>, penalties: &mut Vec<Penalty>) 
 pub(super) fn score_obs(input: &ScoringInput<'_>) -> u32 {
     let mut pts: i32 = 0;
 
-    if input.config.tripwire.is_some() {
+    if input.config.eff_tripwire().is_some() {
         pts += 15;
     }
-    if input.config.lock_file.is_some() {
+    if input.config.eff_lock_file() {
         pts += 15;
     }
     if input.config.outputs.is_some() {
@@ -267,7 +265,7 @@ pub(super) fn score_obs(input: &ScoringInput<'_>) -> u32 {
     }
 
     // Notify hooks
-    if let Some(ref notify) = input.config.notify {
+    if let Some(notify) = input.config.eff_notify() {
         if let Some(map) = notify.as_mapping() {
             let hook_count = ["success", "failure", "drift"]
                 .iter()
@@ -343,12 +341,12 @@ pub(super) fn score_res(input: &ScoringInput<'_>) -> u32 {
     let mut pts: i32 = 0;
 
     // Failure policy
-    if input.config.failure.as_deref() == Some("continue_independent") {
+    if input.config.eff_failure() == Some("continue_independent") {
         pts += 20;
     }
 
     // SSH retries
-    if input.config.ssh_retries.is_some_and(|r| r > 1) {
+    if input.config.eff_ssh_retries().is_some_and(|r| r > 1) {
         pts += 10;
     }
 
@@ -371,10 +369,10 @@ pub(super) fn score_res(input: &ScoringInput<'_>) -> u32 {
     }
 
     // Lifecycle hooks
-    if input.config.pre_apply.is_some() {
+    if input.config.eff_pre_apply().is_some() {
         pts += 10;
     }
-    if input.config.post_apply.is_some() {
+    if input.config.eff_post_apply().is_some() {
         pts += 10;
     }
 

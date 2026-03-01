@@ -1,6 +1,6 @@
-# Container variant: 03-postgresql
+# Recipe: container-03-postgresql
 # Tier: 2 (container-only)
-# Stripped: postgresql service (systemd)
+# Idempotency: strong
 #
 # Installs PostgreSQL packages and configuration without starting the service.
 
@@ -36,6 +36,8 @@ resources:
       - postgresql
       - postgresql-client
       - postgresql-contrib
+    tags: [database, packages]
+    resource_group: packages
 
   pg-data-dir:
     type: file
@@ -46,6 +48,8 @@ resources:
     group: postgres
     mode: '0700'
     depends_on: [pg-packages]
+    tags: [database, storage]
+    resource_group: storage
 
   pg-log-dir:
     type: file
@@ -56,3 +60,25 @@ resources:
     group: postgres
     mode: '0755'
     depends_on: [pg-packages]
+    tags: [database, logging]
+    resource_group: logging
+
+policy:
+  failure: continue_independent
+  tripwire: true
+  lock_file: true
+  ssh_retries: 3
+  pre_apply: "echo 'Applying PostgreSQL config'"
+  post_apply: "echo 'PostgreSQL configured'"
+  notify:
+    on_success: "echo 'PostgreSQL ready'"
+    on_failure: "echo 'PostgreSQL setup failed'"
+    on_drift: "echo 'PostgreSQL config drifted'"
+
+outputs:
+  pg_version:
+    value: "{{params.pg_version}}"
+    description: "PostgreSQL version"
+  data_dir:
+    value: "{{params.data_dir}}"
+    description: "PostgreSQL data directory"

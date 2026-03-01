@@ -1,12 +1,16 @@
-# Container variant: 09-secure-baseline
+# Recipe: container-09-baseline
 # Tier: 2 (container-only)
-# Stripped: sshd service, fail2ban service, firewall rules, sysctl
+# Idempotency: strong
 #
 # Installs security packages and creates hardening configuration files.
 
 version: '1.0'
 name: container-09-baseline
 description: "Container test: security packages and hardening configs"
+
+params:
+  max_auth_tries: "3"
+  ban_time: "3600"
 
 machines:
   target:
@@ -34,6 +38,18 @@ resources:
       - unattended-upgrades
       - logwatch
       - rkhunter
+    tags: [security, packages]
+    resource_group: packages
+
+  sshd-config-dir:
+    type: file
+    machine: target
+    state: directory
+    path: /etc/ssh/sshd_config.d
+    owner: root
+    mode: '0755'
+    tags: [security, ssh]
+    resource_group: ssh
 
   sshd-config:
     type: file
@@ -44,18 +60,14 @@ resources:
       PermitRootLogin no
       PasswordAuthentication no
       X11Forwarding no
-      MaxAuthTries 3
+      MaxAuthTries {{params.max_auth_tries}}
       ClientAliveInterval 300
       ClientAliveCountMax 2
+    owner: root
     mode: '0600'
-    depends_on: [security-packages]
-
-  sshd-config-dir:
-    type: file
-    machine: target
-    state: directory
-    path: /etc/ssh/sshd_config.d
-    mode: '0755'
+    depends_on: [security-packages, sshd-config-dir]
+    tags: [security, ssh]
+    resource_group: ssh
 
   fail2ban-config:
     type: file
@@ -64,17 +76,43 @@ resources:
     content: |
       # Managed by forjar — secure-baseline recipe
       [DEFAULT]
-      bantime = 3600
+      bantime = {{params.ban_time}}
       findtime = 600
       maxretry = 3
       [sshd]
       enabled = true
+    owner: root
     mode: '0644'
     depends_on: [security-packages]
+    tags: [security, fail2ban]
+    resource_group: fail2ban
 
   audit-dir:
     type: file
     machine: target
     state: directory
     path: /var/log/audit
+    owner: root
     mode: '0700'
+    tags: [security, audit]
+    resource_group: audit
+
+policy:
+  failure: continue_independent
+  tripwire: true
+  lock_file: true
+  ssh_retries: 3
+  pre_apply: "echo 'Applying security baseline'"
+  post_apply: "echo 'Security baseline configured'"
+  notify:
+    on_success: "echo 'Security baseline ready'"
+    on_failure: "echo 'Security baseline failed'"
+    on_drift: "echo 'Security baseline drifted'"
+
+outputs:
+  max_auth_tries:
+    value: "{{params.max_auth_tries}}"
+    description: "SSH max authentication attempts"
+  ban_time:
+    value: "{{params.ban_time}}"
+    description: "Fail2ban ban duration in seconds"

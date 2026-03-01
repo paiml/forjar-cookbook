@@ -1,6 +1,6 @@
-# Container variant: 01-developer-workstation
+# Recipe: container-01-devbox
 # Tier: 2 (container-only)
-# Stripped: none (all resources are container-safe)
+# Idempotency: strong
 #
 # Installs development packages and creates dotfiles in a container.
 
@@ -40,6 +40,8 @@ resources:
       - htop
       - tree
       - jq
+    tags: [dev, packages]
+    resource_group: packages
 
   dev-user:
     type: user
@@ -48,6 +50,8 @@ resources:
     home: "{{params.home}}"
     shell: /bin/bash
     depends_on: [dev-packages]
+    tags: [dev, user]
+    resource_group: user
 
   home-dir:
     type: file
@@ -57,6 +61,8 @@ resources:
     owner: "{{params.user}}"
     mode: '0755'
     depends_on: [dev-user]
+    tags: [dev, dotfiles]
+    resource_group: dotfiles
 
   gitconfig:
     type: file
@@ -70,6 +76,8 @@ resources:
     owner: "{{params.user}}"
     mode: '0644'
     depends_on: [home-dir]
+    tags: [dev, dotfiles]
+    resource_group: dotfiles
 
   bashrc:
     type: file
@@ -82,3 +90,25 @@ resources:
     owner: "{{params.user}}"
     mode: '0644'
     depends_on: [home-dir]
+    tags: [dev, dotfiles]
+    resource_group: dotfiles
+
+policy:
+  failure: continue_independent
+  tripwire: true
+  lock_file: true
+  ssh_retries: 3
+  pre_apply: "echo 'Applying developer workstation config'"
+  post_apply: "echo 'Developer workstation configured'"
+  notify:
+    on_success: "echo 'Dev workstation ready'"
+    on_failure: "echo 'Dev workstation setup failed'"
+    on_drift: "echo 'Dev workstation config drifted'"
+
+outputs:
+  user:
+    value: "{{params.user}}"
+    description: "Development user name"
+  home:
+    value: "{{params.home}}"
+    description: "Home directory path"

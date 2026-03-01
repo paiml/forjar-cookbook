@@ -1,3 +1,4 @@
+#![allow(clippy::expect_used, clippy::unwrap_used)]
 //! Tests for Forjar Score — integration, grade boundaries, hard-fails,
 //! composite calculations, and type roundtrips.
 
@@ -26,6 +27,7 @@ fn minimal_config() -> RecipeConfig {
         notify: None,
         ssh_retries: None,
         lock_file: None,
+        policy: None,
     }
 }
 
@@ -343,6 +345,94 @@ fn recipe_config_parse_sample() {
 fn recipe_config_invalid_yaml() {
     let result = RecipeConfig::from_yaml("{{invalid yaml!!");
     assert!(result.is_err());
+}
+
+// ── Policy section parsing ───────────────────────────────────────
+
+const POLICY_YAML: &str = "\
+version: '1.0'
+name: policy-test
+resources:
+  my-file:
+    type: file
+    machine: target
+    path: /tmp/test
+policy:
+  failure: continue_independent
+  tripwire: true
+  lock_file: true
+  ssh_retries: 3
+  pre_apply: \"echo before\"
+  post_apply: \"echo after\"
+  notify:
+    on_success: \"echo ok\"
+";
+
+#[test]
+fn policy_section_parsed() {
+    let config = RecipeConfig::from_yaml(POLICY_YAML).expect("parse");
+    assert!(config.policy.is_some());
+    let p = config.policy.as_ref().unwrap();
+    assert_eq!(p.failure.as_deref(), Some("continue_independent"));
+    assert_eq!(p.ssh_retries, Some(3));
+    assert!(p.pre_apply.is_some());
+    assert!(p.post_apply.is_some());
+}
+
+#[test]
+fn eff_failure_from_policy() {
+    let config = RecipeConfig::from_yaml(POLICY_YAML).expect("parse");
+    assert_eq!(config.eff_failure(), Some("continue_independent"));
+}
+
+#[test]
+fn eff_failure_from_top_level() {
+    let mut config = minimal_config();
+    config.failure = Some("continue_independent".to_string());
+    assert_eq!(config.eff_failure(), Some("continue_independent"));
+}
+
+#[test]
+fn eff_tripwire_from_policy() {
+    let config = RecipeConfig::from_yaml(POLICY_YAML).expect("parse");
+    assert!(config.eff_tripwire().is_some());
+}
+
+#[test]
+fn eff_lock_file_from_policy() {
+    let config = RecipeConfig::from_yaml(POLICY_YAML).expect("parse");
+    assert!(config.eff_lock_file());
+}
+
+#[test]
+fn eff_ssh_retries_from_policy() {
+    let config = RecipeConfig::from_yaml(POLICY_YAML).expect("parse");
+    assert_eq!(config.eff_ssh_retries(), Some(3));
+}
+
+#[test]
+fn eff_pre_post_apply_from_policy() {
+    let config = RecipeConfig::from_yaml(POLICY_YAML).expect("parse");
+    assert_eq!(config.eff_pre_apply(), Some("echo before"));
+    assert_eq!(config.eff_post_apply(), Some("echo after"));
+}
+
+#[test]
+fn eff_notify_from_policy() {
+    let config = RecipeConfig::from_yaml(POLICY_YAML).expect("parse");
+    assert!(config.eff_notify().is_some());
+}
+
+#[test]
+fn eff_methods_none_when_no_policy() {
+    let config = minimal_config();
+    assert!(config.eff_failure().is_none());
+    assert!(config.eff_tripwire().is_none());
+    assert!(!config.eff_lock_file());
+    assert!(config.eff_ssh_retries().is_none());
+    assert!(config.eff_pre_apply().is_none());
+    assert!(config.eff_post_apply().is_none());
+    assert!(config.eff_notify().is_none());
 }
 
 // ── Blocked/pending still score static dimensions ────────────────

@@ -1,6 +1,6 @@
-# Container variant: 05-redis-cache
+# Recipe: container-05-redis
 # Tier: 2 (container-only)
-# Stripped: redis service (systemd), sysctl tuning
+# Idempotency: strong
 #
 # Installs Redis packages and configuration without starting the service.
 
@@ -32,14 +32,19 @@ resources:
     machine: cache
     provider: apt
     packages: [redis-server]
+    tags: [cache, packages]
+    resource_group: packages
 
   redis-conf-dir:
     type: file
     machine: cache
     state: directory
     path: /etc/redis
+    owner: root
     mode: '0755'
     depends_on: [redis-pkg]
+    tags: [cache, config]
+    resource_group: config
 
   redis-config:
     type: file
@@ -53,8 +58,11 @@ resources:
       maxmemory-policy allkeys-lru
       appendonly yes
       appendfilename "appendonly.aof"
+    owner: root
     mode: '0644'
     depends_on: [redis-conf-dir]
+    tags: [cache, config]
+    resource_group: config
 
   redis-data-dir:
     type: file
@@ -65,3 +73,22 @@ resources:
     group: redis
     mode: '0750'
     depends_on: [redis-pkg]
+    tags: [cache, storage]
+    resource_group: storage
+
+policy:
+  failure: continue_independent
+  tripwire: true
+  lock_file: true
+  ssh_retries: 3
+  pre_apply: "echo 'Applying Redis config'"
+  post_apply: "echo 'Redis configured'"
+  notify:
+    on_success: "echo 'Redis cache ready'"
+    on_failure: "echo 'Redis setup failed'"
+    on_drift: "echo 'Redis config drifted'"
+
+outputs:
+  max_memory:
+    value: "{{params.max_memory}}"
+    description: "Redis max memory limit"

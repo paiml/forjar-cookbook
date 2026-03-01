@@ -1,6 +1,6 @@
-# Container variant: 02-web-server
+# Recipe: container-02-webserver
 # Tier: 2 (container-only)
-# Stripped: nginx service (systemd), firewall rules
+# Idempotency: strong
 #
 # Installs nginx and site config without starting the service.
 
@@ -33,14 +33,19 @@ resources:
     machine: webhost
     provider: apt
     packages: [nginx]
+    tags: [web, packages]
+    resource_group: packages
 
   sites-dir:
     type: file
     machine: webhost
     state: directory
     path: /etc/nginx/sites-available
+    owner: root
     mode: '0755'
     depends_on: [nginx-pkg]
+    tags: [web, nginx]
+    resource_group: nginx
 
   site-config:
     type: file
@@ -53,19 +58,48 @@ resources:
           root /var/www/{{params.domain}};
           index index.html;
       }
+    owner: root
     mode: '0644'
     depends_on: [sites-dir]
+    tags: [web, nginx]
+    resource_group: nginx
 
   tls-dir:
     type: file
     machine: webhost
     state: directory
     path: "/etc/ssl/{{params.domain}}"
+    owner: root
     mode: '0700'
+    tags: [web, tls]
+    resource_group: tls
 
   webroot:
     type: file
     machine: webhost
     state: directory
     path: "/var/www/{{params.domain}}"
+    owner: root
     mode: '0755'
+    tags: [web, content]
+    resource_group: content
+
+policy:
+  failure: continue_independent
+  tripwire: true
+  lock_file: true
+  ssh_retries: 3
+  pre_apply: "echo 'Applying web server config'"
+  post_apply: "echo 'Web server configured'"
+  notify:
+    on_success: "echo 'Web server ready'"
+    on_failure: "echo 'Web server setup failed'"
+    on_drift: "echo 'Web server config drifted'"
+
+outputs:
+  domain:
+    value: "{{params.domain}}"
+    description: "Server domain name"
+  port:
+    value: "{{params.port}}"
+    description: "HTTPS port"

@@ -1,6 +1,6 @@
-# Container variant: 06-ci-runner
+# Recipe: container-06-ci-runner
 # Tier: 2 (container-only)
-# Stripped: docker service (systemd), systemd integration
+# Idempotency: strong
 #
 # Installs CI runner packages and workspace structure.
 
@@ -33,10 +33,11 @@ resources:
     machine: runner-host
     provider: apt
     packages:
-      - curl
       - git
       - jq
       - build-essential
+    tags: [ci, packages]
+    resource_group: packages
 
   runner-user:
     type: user
@@ -45,6 +46,8 @@ resources:
     home: "/home/{{params.runner_user}}"
     shell: /bin/bash
     depends_on: [ci-packages]
+    tags: [ci, user]
+    resource_group: user
 
   workspace-dir:
     type: file
@@ -54,6 +57,8 @@ resources:
     owner: "{{params.runner_user}}"
     mode: '0755'
     depends_on: [runner-user]
+    tags: [ci, workspace]
+    resource_group: workspace
 
   workspace-builds:
     type: file
@@ -63,6 +68,8 @@ resources:
     owner: "{{params.runner_user}}"
     mode: '0755'
     depends_on: [workspace-dir]
+    tags: [ci, workspace]
+    resource_group: workspace
 
   workspace-cache:
     type: file
@@ -72,6 +79,8 @@ resources:
     owner: "{{params.runner_user}}"
     mode: '0755'
     depends_on: [workspace-dir]
+    tags: [ci, workspace]
+    resource_group: workspace
 
   workspace-logs:
     type: file
@@ -81,3 +90,25 @@ resources:
     owner: "{{params.runner_user}}"
     mode: '0755'
     depends_on: [workspace-dir]
+    tags: [ci, workspace]
+    resource_group: workspace
+
+policy:
+  failure: continue_independent
+  tripwire: true
+  lock_file: true
+  ssh_retries: 3
+  pre_apply: "echo 'Applying CI runner config'"
+  post_apply: "echo 'CI runner configured'"
+  notify:
+    on_success: "echo 'CI runner ready'"
+    on_failure: "echo 'CI runner setup failed'"
+    on_drift: "echo 'CI runner config drifted'"
+
+outputs:
+  runner_user:
+    value: "{{params.runner_user}}"
+    description: "CI runner user name"
+  workspace:
+    value: "{{params.workspace}}"
+    description: "CI runner workspace path"

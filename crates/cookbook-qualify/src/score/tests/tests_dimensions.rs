@@ -23,6 +23,7 @@ fn minimal_config() -> RecipeConfig {
         notify: None,
         ssh_retries: None,
         lock_file: None,
+        policy: None,
     }
 }
 
