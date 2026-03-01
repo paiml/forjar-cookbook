@@ -388,6 +388,34 @@ resources:
 }
 
 #[test]
+fn cmp_with_params_tags_and_template_interpolation() {
+    let yaml = "\
+version: '1.0'
+name: test-recipe
+params:
+  base_dir: /tmp/test
+resources:
+  a:
+    type: file
+    path: \"{{params.base_dir}}/file.txt\"
+    tags: [web]
+    resource_group: app
+";
+    let config = RecipeConfig::from_yaml(yaml).unwrap_or_else(|_| minimal_config());
+    let input = ScoringInput {
+        status: &RecipeStatus::Qualified,
+        idempotency_class: &IdempotencyClass::Strong,
+        config: &config,
+        raw_yaml: yaml,
+        budget_ms: 0,
+        runtime: None,
+    };
+    let score = score_cmp(&input);
+    // params: +20, templates ({{...}}): +10, tags: +15, resource_group: +15 = 60
+    assert_eq!(score, 60);
+}
+
+#[test]
 fn cmp_empty_config_is_zero() {
     let config = minimal_config();
     let input = ScoringInput {

@@ -183,11 +183,23 @@ pub(super) fn has_tags(val: &serde_yaml_ng::Value) -> bool {
         .is_some()
 }
 
-/// Check if a resource has a `template` field.
+/// Check if a resource uses templates (either a `template` field or `{{` in values).
 pub(super) fn has_template(val: &serde_yaml_ng::Value) -> bool {
-    val.as_mapping()
-        .and_then(|m| m.get(serde_yaml_ng::Value::String("template".to_string())))
+    let Some(mapping) = val.as_mapping() else {
+        return false;
+    };
+    // Explicit template field
+    if mapping
+        .get(serde_yaml_ng::Value::String("template".to_string()))
         .is_some()
+    {
+        return true;
+    }
+    // Detect {{...}} interpolation in any string value
+    mapping.values().any(|v| {
+        v.as_str()
+            .is_some_and(|s| s.contains("{{") && s.contains("}}"))
+    })
 }
 
 /// Check if a resource has a `resource_group` field.
