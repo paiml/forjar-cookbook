@@ -2,10 +2,12 @@
 # Primary target: self-hosted Intel runner (bare-metal)
 
 .SUFFIXES:
+.DELETE_ON_ERROR:
+.ONESHELL:
 
 .PHONY: all build test lint fmt fmt-check check coverage coverage-check \
         examples docs-check update-qualifications qualify-recipe qualify-all \
-        book bashrs-lint clean help
+        score score-recipe book bashrs-lint clean release help
 
 # Default target
 all: check
@@ -66,6 +68,16 @@ qualify-recipe:
 	@test -n "$(RECIPE)" || (echo "Usage: make qualify-recipe RECIPE=01"; exit 1)
 	cargo run --bin cookbook-runner -- qualify -f recipes/$(RECIPE)*.yaml
 
+# Score all recipes (static analysis, updates CSV)
+score:
+	cargo run --example score_all
+
+# Score a single recipe (usage: make score-recipe RECIPE=01)
+# Static-only: shows SAF/OBS/DOC/RES/CMP (COR/IDM/PRF need runtime data)
+score-recipe:
+	@test -n "$(RECIPE)" || (echo "Usage: make score-recipe RECIPE=01"; exit 1)
+	-cargo run --bin cookbook-runner -- score -f recipes/$(RECIPE)*.yaml
+
 # Qualify all recipes on the runner
 qualify-all:
 	@./scripts/qualify-all.sh
@@ -100,6 +112,10 @@ help:
 	@echo "  examples             Run all cargo examples"
 	@echo "  docs-check           Check documentation consistency"
 	@echo "  update-qualifications Update README table from CSV"
+	@echo ""
+	@echo "Scoring targets:"
+	@echo "  score                      Score all recipes (static analysis)"
+	@echo "  score-recipe RECIPE=01     Score a single recipe"
 	@echo ""
 	@echo "Qualification targets:"
 	@echo "  qualify-recipe RECIPE=01   Qualify a single recipe"

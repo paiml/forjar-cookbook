@@ -2,8 +2,8 @@
 # Documentation consistency check — ensures README matches CSV.
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 CSV="$ROOT_DIR/docs/certifications/recipes.csv"
 README="$ROOT_DIR/README.md"
 
