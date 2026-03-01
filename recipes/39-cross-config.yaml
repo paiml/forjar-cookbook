@@ -36,6 +36,7 @@ data:
     type: forjar-state
     state_dir: ./state
     config: network-stack
+    default: "10.0.1.0/24"
     outputs:
       - subnet_cidr
       - gateway_ip
