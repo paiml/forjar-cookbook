@@ -7,6 +7,7 @@ mod report;
 mod runner;
 
 pub use report::{
-    QualifyVerdict, format_qualify_report, format_score_report, format_validate_report, verdict,
+    QualifyVerdict, format_qualify_report, format_score_report, format_validate_report,
+    runtime_data_from_qualify, verdict,
 };
 pub use runner::{QualifyResult, RecipeRunner, RunOutcome};

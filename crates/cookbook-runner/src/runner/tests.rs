@@ -195,12 +195,11 @@ fn qualify_result_debug() {
 
 /// Generate a unique temp dir path for tests (avoids parallel test collisions).
 fn unique_temp_dir(prefix: &str) -> std::path::PathBuf {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
     let id = std::process::id();
-    let ts = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_nanos())
-        .unwrap_or(0);
-    std::env::temp_dir().join(format!("{prefix}-{id}-{ts}"))
+    let seq = COUNTER.fetch_add(1, Ordering::Relaxed);
+    std::env::temp_dir().join(format!("{prefix}-{id}-{seq}"))
 }
 
 /// Helper: write a script that succeeds for given subcommands, fails otherwise.

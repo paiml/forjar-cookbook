@@ -137,5 +137,43 @@ pub fn format_score_report(score: &ForjarScore) -> String {
     lines.join("\n")
 }
 
+/// Build `RuntimeData` from a `QualifyResult` for scoring integration.
+///
+/// Maps qualification cycle outcomes to the scoring runtime data structure.
+#[must_use]
+pub fn runtime_data_from_qualify(result: &QualifyResult) -> cookbook_qualify::RuntimeData {
+    let validate_pass = result.validate.exit_code == 0;
+    let plan_pass = result.plan.as_ref().is_some_and(|p| p.exit_code == 0);
+    let first_apply_pass = result
+        .first_apply
+        .as_ref()
+        .is_some_and(|a| a.exit_code == 0);
+    let second_apply_pass = result
+        .idempotent_apply
+        .as_ref()
+        .is_some_and(|a| a.exit_code == 0);
+
+    let first_apply_ms = result.first_apply.as_ref().map_or(0, |a| a.duration_ms);
+    let idempotent_apply_ms = result
+        .idempotent_apply
+        .as_ref()
+        .map_or(0, |a| a.duration_ms);
+
+    cookbook_qualify::RuntimeData {
+        validate_pass,
+        plan_pass,
+        first_apply_pass,
+        second_apply_pass,
+        zero_changes: result.idempotent,
+        hash_stable: result.idempotent,
+        changed_on_reapply: 0, // TODO: parse from output
+        warning_count: 0,      // TODO: parse from output
+        first_apply_ms,
+        idempotent_apply_ms,
+        state_lock_written: first_apply_pass,
+        all_resources_converged: first_apply_pass,
+    }
+}
+
 #[cfg(test)]
 mod tests;

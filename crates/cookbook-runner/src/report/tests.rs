@@ -252,6 +252,58 @@ fn score_report_shows_grade() {
     assert!(report.contains("CMP= 35"));
 }
 
+// --- runtime_data_from_qualify tests ---
+
+#[test]
+fn runtime_data_from_qualified_result() {
+    let result = qualified_result();
+    let rt = runtime_data_from_qualify(&result);
+    assert!(rt.validate_pass);
+    assert!(rt.plan_pass);
+    assert!(rt.first_apply_pass);
+    assert!(rt.second_apply_pass);
+    assert!(rt.zero_changes);
+    assert!(rt.hash_stable);
+    assert_eq!(rt.first_apply_ms, 45000);
+    assert_eq!(rt.idempotent_apply_ms, 1200);
+    assert!(rt.state_lock_written);
+    assert!(rt.all_resources_converged);
+}
+
+#[test]
+fn runtime_data_from_failed_result() {
+    let result = QualifyResult {
+        validate: ok_outcome(10),
+        plan: Some(fail_outcome(20)),
+        first_apply: None,
+        idempotent_apply: None,
+        idempotent: false,
+    };
+    let rt = runtime_data_from_qualify(&result);
+    assert!(rt.validate_pass);
+    assert!(!rt.plan_pass);
+    assert!(!rt.first_apply_pass);
+    assert!(!rt.second_apply_pass);
+    assert!(!rt.zero_changes);
+    assert_eq!(rt.first_apply_ms, 0);
+    assert_eq!(rt.idempotent_apply_ms, 0);
+}
+
+#[test]
+fn runtime_data_from_validate_only_failure() {
+    let result = QualifyResult {
+        validate: fail_outcome(5),
+        plan: None,
+        first_apply: None,
+        idempotent_apply: None,
+        idempotent: false,
+    };
+    let rt = runtime_data_from_qualify(&result);
+    assert!(!rt.validate_pass);
+    assert!(!rt.plan_pass);
+    assert!(!rt.first_apply_pass);
+}
+
 #[test]
 fn score_report_shows_penalties() {
     let score = cookbook_qualify::ForjarScore {
