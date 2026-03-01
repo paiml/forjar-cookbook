@@ -40,7 +40,7 @@ make update-qualifications
 ## Qualification Dashboard
 
 <!-- QUALIFICATION_TABLE_START -->
-**Qualification Summary** (updated: 2026-03-01 17:38 UTC)
+**Qualification Summary** (updated: 2026-03-01 17:39 UTC)
 
 | Status | Count |
 |--------|-------|
@@ -53,8 +53,8 @@ make update-qualifications
 | Grade | Count |
 |-------|-------|
 | A | 0 |
-| B | 53 |
-| C | 3 |
+| B | 56 |
+| C | 0 |
 | D | 0 |
 | F | 5 |
 
@@ -75,9 +75,9 @@ make update-qualifications
 | 13 | build-sandbox | nix | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![B](https://img.shields.io/badge/B-blue) | 1+2 | Strong | 639ms | 21ms | 88 | — |
 | 14 | system-profile | nix | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![B](https://img.shields.io/badge/B-blue) | 1+2 | Strong | 1.5s | 23ms | 87 | — |
 | 15 | workspace | nix | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![B](https://img.shields.io/badge/B-blue) | 1+2 | Strong | 1.3s | 25ms | 86 | — |
-| 16 | rust-release | rust | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 1+2 | Strong | 712ms | 22ms | 79 | — |
-| 17 | static-musl | rust | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 1+2 | Strong | 906ms | 22ms | 79 | — |
-| 19 | cross-compile | rust | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 1+2 | Strong | 1.1s | 22ms | 79 | — |
+| 16 | rust-release | rust | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![B](https://img.shields.io/badge/B-blue) | 1+2 | Strong | 712ms | 22ms | 87 | — |
+| 17 | static-musl | rust | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![B](https://img.shields.io/badge/B-blue) | 1+2 | Strong | 906ms | 22ms | 87 | — |
+| 19 | cross-compile | rust | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![B](https://img.shields.io/badge/B-blue) | 1+2 | Strong | 1.1s | 22ms | 87 | — |
 | 20 | sovereign-stack | advanced | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![B](https://img.shields.io/badge/B-blue) | 2+3 | Strong | 1.2s | 21ms | 87 | — |
 | 21 | apr-model | advanced | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![B](https://img.shields.io/badge/B-blue) | 3 | Weak | 1.5s | 24ms | 86 | — |
 | 22 | secrets-lifecycle | advanced | ![blocked](https://img.shields.io/badge/BLOCKED-red) | ![F](https://img.shields.io/badge/F-red) | 2+3 | Strong | — | — | 0 | FJ-1129: Secret provider exec fails |

@@ -54,7 +54,10 @@ resources:
       set -euo pipefail
       export PATH="$HOME/.cargo/bin:$PATH"
       if ! command -v rustc &>/dev/null; then
-        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o /tmp/rustup-init.sh
+        chmod +x /tmp/rustup-init.sh
+        /tmp/rustup-init.sh -y
+        rm -f /tmp/rustup-init.sh
         export PATH="$HOME/.cargo/bin:$PATH"
       fi
       rustup target add x86_64-unknown-linux-musl 2>/dev/null || true
