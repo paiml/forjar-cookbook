@@ -11,6 +11,10 @@ version: '1.0'
 name: saved-plan-test
 description: "Saved plan file workflow for TOCTOU safety in CI/CD pipelines"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   plan_dir: /tmp/forjar-plans
   app_name: web-stack
@@ -32,6 +36,7 @@ machines:
 
 resources:
   plan-dir:
+    # Deploy managed configuration file
     type: file
     machine: target
     state: directory
@@ -43,6 +48,7 @@ resources:
 
   # Resource that would be planned and saved
   app-config:
+    # Deploy managed configuration file
     type: file
     machine: target
     path: /etc/app/config.yaml

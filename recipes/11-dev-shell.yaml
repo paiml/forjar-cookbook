@@ -11,6 +11,10 @@ version: '1.0'
 name: dev-shell
 description: "Nix-style isolated development shell with overlay packages and shell hooks"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   shell_name: rust-dev
   packages_apt: "build-essential,curl,git,pkg-config,libssl-dev"

@@ -11,6 +11,10 @@ version: '1.0'
 name: ci-runner
 description: "Self-hosted GitHub Actions runner with Docker, Rust, and build tools"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   runner_name: forjar-runner
   runner_labels: "self-hosted,linux,x86_64"
@@ -27,6 +31,7 @@ machines:
 
 resources:
   runner-user:
+    # Manage user account and permissions
     type: user
     machine: runner-host
     name: "{{params.runner_user}}"
@@ -38,6 +43,7 @@ resources:
     resource_group: runner
 
   runner-deps:
+    # Ensure required packages are installed and up-to-date
     type: package
     machine: runner-host
     provider: apt
@@ -52,6 +58,7 @@ resources:
     resource_group: runner
 
   docker-pkg:
+    # Ensure required packages are installed and up-to-date
     type: package
     machine: runner-host
     provider: apt
@@ -59,27 +66,32 @@ resources:
       - docker-ce
       - docker-ce-cli
       - containerd.io
+    # Dependency ordering
     depends_on: [runner-user]
     tags: [ci, docker]
     resource_group: docker
 
   docker-service:
+    # Manage system service lifecycle
     type: service
     machine: runner-host
     name: docker
     state: running
     enabled: true
+    # Dependency ordering
     depends_on: [docker-pkg]
     tags: [ci, docker]
     resource_group: docker
 
   runner-dir:
+    # Deploy managed configuration file
     type: file
     machine: runner-host
     state: directory
     path: /opt/actions-runner
     owner: "{{params.runner_user}}"
     mode: '0755'
+    # Dependency ordering
     depends_on: [runner-user]
     tags: [ci, runner]
     resource_group: runner

@@ -11,6 +11,10 @@ version: '1.0'
 name: build-sandbox
 description: "Ephemeral build sandbox with overlay isolation, artifact extraction, and cleanup"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   build_name: forjar-build
   output_dir: /tmp/build-output

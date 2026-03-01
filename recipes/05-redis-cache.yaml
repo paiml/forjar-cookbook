@@ -10,6 +10,10 @@ version: '1.0'
 name: redis-cache
 description: "Redis cache with AOF persistence, memory limits, and firewall lockdown"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   port: "6379"
   maxmemory: "256mb"
@@ -33,6 +37,7 @@ machines:
 
 resources:
   redis-data:
+    # Deploy managed configuration file
     type: file
     machine: cache-host
     state: directory
@@ -43,6 +48,7 @@ resources:
     resource_group: redis
 
   redis-config:
+    # Deploy managed configuration file
     type: file
     machine: cache-host
     path: /etc/redis/redis.conf
@@ -63,11 +69,13 @@ resources:
       tcp-keepalive 300
     owner: root
     mode: '0640'
+    # Dependency ordering
     depends_on: [redis-data]
     tags: [cache, config]
     resource_group: redis
 
   redis-container:
+    # Configure docker resource
     type: docker
     machine: cache-host
     name: forjar-redis
@@ -79,6 +87,7 @@ resources:
       - "/etc/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro"
     command: "redis-server /usr/local/etc/redis/redis.conf"
     restart: always
+    # Dependency ordering
     depends_on: [redis-config]
     tags: [cache, docker]
     resource_group: redis

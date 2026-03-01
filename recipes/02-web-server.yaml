@@ -11,6 +11,10 @@ version: '1.0'
 name: web-application-server
 description: "Nginx reverse proxy with TLS, firewall, and site configuration"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   domain: example.com
   port: "443"
@@ -34,6 +38,7 @@ machines:
 
 resources:
   nginx-pkg:
+    # Ensure required packages are installed and up-to-date
     type: package
     machine: webhost
     provider: apt
@@ -42,17 +47,20 @@ resources:
     resource_group: web-server
 
   tls-dir:
+    # Deploy managed configuration file
     type: file
     machine: webhost
     state: directory
     path: "/etc/nginx/ssl/{{params.domain}}"
     owner: root
     mode: '0700'
+    # Dependency ordering
     depends_on: [nginx-pkg]
     tags: [web, tls]
     resource_group: web-server
 
   nginx-site:
+    # Deploy managed configuration file
     type: file
     machine: webhost
     path: "/etc/nginx/sites-available/{{params.domain}}"
@@ -78,28 +86,33 @@ resources:
       }
     owner: root
     mode: '0644'
+    # Dependency ordering
     depends_on: [tls-dir]
     tags: [web, nginx, config]
     resource_group: web-server
 
   nginx-enable:
+    # Deploy managed configuration file
     type: file
     machine: webhost
     path: "/etc/nginx/sites-enabled/{{params.domain}}"
     source: "/etc/nginx/sites-available/{{params.domain}}"
     owner: root
     mode: '0644'
+    # Dependency ordering
     depends_on: [nginx-site]
     tags: [web, nginx]
     resource_group: web-server
 
   nginx-service:
+    # Manage system service lifecycle
     type: service
     machine: webhost
     name: nginx
     state: running
     enabled: true
     restart_on: [nginx-site]
+    # Dependency ordering
     depends_on: [nginx-enable]
     tags: [web, nginx]
     resource_group: web-server

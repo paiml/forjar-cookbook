@@ -11,6 +11,10 @@ version: '1.0'
 name: failure-state-recovery
 description: "Failure mode test: state lock deletion recovery with full re-convergence"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   test_dir: /tmp/recovery-test
   test_name: state-recovery
@@ -32,6 +36,7 @@ machines:
 
 resources:
   recovery-dir:
+    # Deploy managed configuration file
     type: file
     machine: target
     state: directory
@@ -42,23 +47,27 @@ resources:
     resource_group: recovery
 
   file-a:
+    # Deploy managed configuration file
     type: file
     machine: target
     path: "{{params.test_dir}}/file-a.txt"
     owner: root
     mode: '0644'
     content: "file-a-content — {{params.test_name}} test"
+    # Dependency ordering
     depends_on: [recovery-dir]
     tags: [failure-test, recovery]
     resource_group: recovery
 
   file-b:
+    # Deploy managed configuration file
     type: file
     machine: target
     path: "{{params.test_dir}}/file-b.txt"
     owner: root
     mode: '0644'
     content: "file-b-content — {{params.test_name}} test"
+    # Dependency ordering
     depends_on: [file-a]
     tags: [failure-test, recovery]
     resource_group: recovery

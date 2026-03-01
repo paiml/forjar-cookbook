@@ -10,6 +10,10 @@ version: '1.0'
 name: postgresql-database
 description: "Production PostgreSQL with tuned config, automated backups, and firewall"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   pg_version: "16"
   listen_addresses: "localhost"
@@ -36,6 +40,7 @@ machines:
 
 resources:
   pg-pkg:
+    # Ensure required packages are installed and up-to-date
     type: package
     machine: db-host
     provider: apt
@@ -45,6 +50,7 @@ resources:
     resource_group: postgresql
 
   pg-conf:
+    # Deploy managed configuration file
     type: file
     machine: db-host
     path: "/etc/postgresql/{{params.pg_version}}/main/postgresql.conf"
@@ -65,11 +71,13 @@ resources:
       log_min_duration_statement = 1000
     owner: root
     mode: '0644'
+    # Dependency ordering
     depends_on: [pg-pkg]
     tags: [database, config]
     resource_group: postgresql
 
   pg-hba:
+    # Deploy managed configuration file
     type: file
     machine: db-host
     path: "/etc/postgresql/{{params.pg_version}}/main/pg_hba.conf"
@@ -82,17 +90,20 @@ resources:
       host    all             all             {{params.allowed_cidr}}   scram-sha-256
     owner: root
     mode: '0640'
+    # Dependency ordering
     depends_on: [pg-pkg]
     tags: [database, security]
     resource_group: postgresql
 
   pg-service:
+    # Manage system service lifecycle
     type: service
     machine: db-host
     name: postgresql
     state: running
     enabled: true
     restart_on: [pg-conf, pg-hba]
+    # Dependency ordering
     depends_on: [pg-conf, pg-hba]
     tags: [database, postgresql]
     resource_group: postgresql

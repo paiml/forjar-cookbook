@@ -11,6 +11,10 @@ version: '1.0'
 name: stack-sovereign-ai
 description: "Composed stack: security + dev-tools + GPU + model serving + monitoring + secrets"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   gpu_backend: rocm
   model_name: llama-7b
@@ -34,6 +38,7 @@ machines:
 resources:
   # --- Layer 1: Security ---
   security-config:
+    # Deploy managed configuration file
     type: file
     machine: target
     path: /etc/ssh/sshd_config.d/forjar-sovereign.conf
@@ -48,6 +53,7 @@ resources:
 
   # --- Layer 2: Dev Tools ---
   dev-packages:
+    # Ensure required packages are installed and up-to-date
     type: package
     machine: target
     provider: apt
@@ -57,17 +63,20 @@ resources:
       - curl
       - htop
       - jq
+    # Dependency ordering
     depends_on: [security-config]
     tags: [stack, dev-tools]
     resource_group: dev-tools
 
   mlops-user:
+    # Manage user account and permissions
     type: user
     machine: target
     name: "{{params.user}}"
     home: "/home/{{params.user}}"
     shell: /bin/bash
     groups: [sudo]
+    # Dependency ordering
     depends_on: [dev-packages]
     tags: [stack, dev-tools]
     resource_group: dev-tools

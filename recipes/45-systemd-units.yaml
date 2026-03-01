@@ -10,6 +10,10 @@ version: '1.0'
 name: systemd-units
 description: "Custom systemd service and timer units with security hardening and monitoring"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   unit_name: forjar-agent
   exec_start: /usr/local/bin/forjar-agent
@@ -35,6 +39,7 @@ machines:
 
 resources:
   working-dir:
+    # Deploy managed configuration file
     type: file
     machine: systemd-host
     state: directory
@@ -45,6 +50,7 @@ resources:
     resource_group: systemd-units
 
   unit-service:
+    # Deploy managed configuration file
     type: file
     machine: systemd-host
     path: "/etc/systemd/system/{{params.unit_name}}.service"
@@ -72,11 +78,13 @@ resources:
 
       [Install]
       WantedBy=multi-user.target
+    # Dependency ordering
     depends_on: [working-dir]
     tags: [systemd, service]
     resource_group: systemd-units
 
   unit-timer:
+    # Deploy managed configuration file
     type: file
     machine: systemd-host
     path: "/etc/systemd/system/{{params.unit_name}}-check.timer"
@@ -92,11 +100,13 @@ resources:
 
       [Install]
       WantedBy=timers.target
+    # Dependency ordering
     depends_on: [unit-service]
     tags: [systemd, timer]
     resource_group: systemd-units
 
   daemon-reload-script:
+    # Deploy managed configuration file
     type: file
     machine: systemd-host
     path: /usr/local/bin/forjar-daemon-reload.sh
@@ -105,11 +115,13 @@ resources:
     content: |
       #!/bin/bash
       systemctl daemon-reload 2>/dev/null || echo "daemon-reload skipped (container)"
+    # Dependency ordering
     depends_on: [unit-service, unit-timer]
     tags: [systemd, reload]
     resource_group: systemd-units
 
   unit-status-script:
+    # Deploy managed configuration file
     type: file
     machine: systemd-host
     path: /usr/local/bin/forjar-unit-status.sh

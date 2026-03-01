@@ -11,6 +11,10 @@ version: '1.0'
 name: testing-dsl-example
 description: "Native test runner with co-located test definitions and assertion DSL"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   test_name: webserver-tests
   test_transport: container
@@ -33,6 +37,7 @@ machines:
 resources:
   # The "recipe under test"
   test-packages:
+    # Ensure required packages are installed and up-to-date
     type: package
     machine: target
     provider: apt
@@ -42,6 +47,7 @@ resources:
     resource_group: recipe
 
   test-config:
+    # Deploy managed configuration file
     type: file
     machine: target
     path: /etc/test-app/config.yaml
@@ -52,6 +58,7 @@ resources:
       server_name: test.local
       port: 8080
       workers: 2
+    # Dependency ordering
     depends_on: [test-packages]
     tags: [testing, config]
     resource_group: recipe

@@ -10,6 +10,10 @@ version: '1.0'
 name: rust-release-build
 description: "Rust production release build with LTO, stripping, and binary deployment"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   crate_name: forjar
   target_path: /usr/local/bin/forjar
@@ -32,6 +36,7 @@ machines:
 
 resources:
   build-deps:
+    # Ensure required packages are installed and up-to-date
     type: package
     machine: build-host
     provider: apt
@@ -44,6 +49,7 @@ resources:
     resource_group: rust-build
 
   rust-toolchain:
+    # Deploy managed configuration file
     type: file
     machine: build-host
     path: /usr/local/bin/forjar-ensure-rust.sh
@@ -61,11 +67,13 @@ resources:
       fi
       rustc --version
       cargo --version
+    # Dependency ordering
     depends_on: [build-deps]
     tags: [rust, toolchain]
     resource_group: rust-build
 
   build-script:
+    # Deploy managed configuration file
     type: file
     machine: build-host
     path: /usr/local/bin/forjar-release-build.sh

@@ -10,6 +10,10 @@ version: '1.0'
 name: private-apt-repo
 description: "Private APT repository with nginx, GPG signing, and package index generation"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   repo_name: internal
   repo_dir: /var/lib/apt-repo/internal
@@ -34,6 +38,7 @@ machines:
 
 resources:
   repo-deps:
+    # Ensure required packages are installed and up-to-date
     type: package
     machine: apt-server
     provider: apt
@@ -45,28 +50,33 @@ resources:
     resource_group: private-repo
 
   repo-pool-dir:
+    # Deploy managed configuration file
     type: file
     machine: apt-server
     state: directory
     path: /var/lib/apt-repo/internal/pool/main
     owner: root
     mode: '0755'
+    # Dependency ordering
     depends_on: [repo-deps]
     tags: [apt-repo, dirs]
     resource_group: private-repo
 
   repo-dists-dir:
+    # Deploy managed configuration file
     type: file
     machine: apt-server
     state: directory
     path: /var/lib/apt-repo/internal/dists/jammy/main/binary-amd64
     owner: root
     mode: '0755'
+    # Dependency ordering
     depends_on: [repo-deps]
     tags: [apt-repo, dirs]
     resource_group: private-repo
 
   update-script:
+    # Deploy managed configuration file
     type: file
     machine: apt-server
     path: /usr/local/bin/apt-repo-update-internal
@@ -79,11 +89,13 @@ resources:
       dpkg-scanpackages pool/ > dists/jammy/main/binary-amd64/Packages 2>/dev/null || true
       gzip -kf dists/jammy/main/binary-amd64/Packages 2>/dev/null || true
       echo "Repo updated: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    # Dependency ordering
     depends_on: [repo-pool-dir, repo-dists-dir]
     tags: [apt-repo, update]
     resource_group: private-repo
 
   nginx-site:
+    # Deploy managed configuration file
     type: file
     machine: apt-server
     path: /etc/nginx/sites-available/apt-repo-internal
@@ -98,6 +110,7 @@ resources:
               allow all;
           }
       }
+    # Dependency ordering
     depends_on: [repo-deps]
     tags: [apt-repo, nginx]
     resource_group: private-repo

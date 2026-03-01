@@ -11,6 +11,10 @@ version: '1.0'
 name: json-plan-test
 description: "Machine-readable JSON plan output for policy engines and CI automation"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   policy_engine: opa
   output_format: json
@@ -33,6 +37,7 @@ machines:
 resources:
   # Infrastructure that would produce a JSON plan
   web-packages:
+    # Ensure required packages are installed and up-to-date
     type: package
     machine: target
     provider: apt
@@ -43,6 +48,7 @@ resources:
     resource_group: web
 
   web-config:
+    # Deploy managed configuration file
     type: file
     machine: target
     path: /etc/web/config.json

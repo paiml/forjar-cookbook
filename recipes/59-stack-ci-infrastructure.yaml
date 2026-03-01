@@ -11,6 +11,10 @@ version: '1.0'
 name: stack-ci-infrastructure
 description: "Composed stack: security + CI runner tools + monitoring"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   runner_user: runner
 
@@ -32,6 +36,7 @@ machines:
 resources:
   # --- Layer 1: Security ---
   security-config:
+    # Deploy managed configuration file
     type: file
     machine: target
     path: /etc/ssh/sshd_config.d/forjar-ci.conf
@@ -45,6 +50,7 @@ resources:
 
   # --- Layer 2: CI Runner ---
   ci-packages:
+    # Ensure required packages are installed and up-to-date
     type: package
     machine: target
     provider: apt
@@ -53,6 +59,7 @@ resources:
       - git
       - curl
       - jq
+    # Dependency ordering
     depends_on: [security-config]
     tags: [stack, ci-runner]
     resource_group: ci-runner

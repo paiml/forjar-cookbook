@@ -11,6 +11,10 @@ version: '1.0'
 name: developer-workstation
 description: "Development machine with tools, dotfiles, and shell config"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   user: dev
   home: /home/dev
@@ -34,6 +38,7 @@ machines:
 
 resources:
   dev-packages:
+    # Ensure required packages are installed and up-to-date
     type: package
     machine: devbox
     provider: apt
@@ -49,28 +54,33 @@ resources:
     resource_group: development
 
   dev-user:
+    # Manage user account and permissions
     type: user
     machine: devbox
     name: "{{params.user}}"
     home: "{{params.home}}"
     shell: /bin/bash
     groups: [sudo]
+    # Dependency ordering
     depends_on: [dev-packages]
     tags: [base]
     resource_group: development
 
   home-dir:
+    # Deploy managed configuration file
     type: file
     machine: devbox
     state: directory
     path: "{{params.home}}"
     owner: "{{params.user}}"
     mode: '0755'
+    # Dependency ordering
     depends_on: [dev-user]
     tags: [dotfiles]
     resource_group: dotfiles
 
   gitconfig:
+    # Deploy managed configuration file
     type: file
     machine: devbox
     path: "{{params.home}}/.gitconfig"
@@ -84,6 +94,7 @@ resources:
         rebase = true
     owner: "{{params.user}}"
     mode: '0644'
+    # Dependency ordering
     depends_on: [home-dir]
     tags: [dotfiles, git]
     resource_group: dotfiles

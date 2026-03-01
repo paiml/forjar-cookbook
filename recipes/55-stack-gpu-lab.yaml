@@ -11,6 +11,10 @@ version: '1.0'
 name: stack-gpu-lab
 description: "Composed stack: dev tools + GPU configuration + monitoring + security baseline"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   gpu_backend: rocm
   user: mleng
@@ -33,6 +37,7 @@ machines:
 resources:
   # --- Layer 1: Security ---
   security-config:
+    # Deploy managed configuration file
     type: file
     machine: target
     path: /etc/ssh/sshd_config.d/forjar-lab.conf
@@ -46,6 +51,7 @@ resources:
 
   # --- Layer 2: Dev Tools ---
   dev-packages:
+    # Ensure required packages are installed and up-to-date
     type: package
     machine: target
     provider: apt
@@ -53,6 +59,7 @@ resources:
       - build-essential
       - git
       - htop
+    # Dependency ordering
     depends_on: [security-config]
     tags: [stack, dev-tools]
     resource_group: dev-tools

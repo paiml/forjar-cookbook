@@ -10,6 +10,10 @@ version: '1.0'
 name: time-sync
 description: "Time synchronization with chrony NTP, timezone configuration, and expiry monitoring"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   timezone: UTC
 
@@ -30,6 +34,7 @@ machines:
 
 resources:
   chrony-pkg:
+    # Ensure required packages are installed and up-to-date
     type: package
     machine: time-host
     provider: apt
@@ -39,6 +44,7 @@ resources:
     resource_group: time-sync
 
   chrony-config:
+    # Deploy managed configuration file
     type: file
     machine: time-host
     path: /etc/chrony/chrony.conf
@@ -54,11 +60,13 @@ resources:
       makestep 1.0 3
       rtcsync
       logdir /var/log/chrony
+    # Dependency ordering
     depends_on: [chrony-pkg]
     tags: [time, config]
     resource_group: time-sync
 
   chrony-service:
+    # Manage system service lifecycle
     type: service
     machine: time-host
     name: chrony

@@ -11,6 +11,10 @@ version: '1.0'
 name: distribution-pipeline
 description: "Full package pipeline: build binary, create .deb, stage to repo, verify installation"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   pkg_name: forjar
   pkg_version: 1.0.0
@@ -33,6 +37,7 @@ machines:
 
 resources:
   pipeline-deps:
+    # Ensure required packages are installed and up-to-date
     type: package
     machine: pipeline-host
     provider: apt
@@ -43,28 +48,33 @@ resources:
     resource_group: pipeline
 
   staging-tree:
+    # Deploy managed configuration file
     type: file
     machine: pipeline-host
     state: directory
     path: /tmp/pipeline/staging/DEBIAN
     owner: root
     mode: '0755'
+    # Dependency ordering
     depends_on: [pipeline-deps]
     tags: [pipeline, staging]
     resource_group: pipeline
 
   staging-bin:
+    # Deploy managed configuration file
     type: file
     machine: pipeline-host
     state: directory
     path: /tmp/pipeline/staging/usr/local/bin
     owner: root
     mode: '0755'
+    # Dependency ordering
     depends_on: [staging-tree]
     tags: [pipeline, staging]
     resource_group: pipeline
 
   control-file:
+    # Deploy managed configuration file
     type: file
     machine: pipeline-host
     path: /tmp/pipeline/staging/DEBIAN/control
@@ -76,11 +86,13 @@ resources:
       Architecture: amd64
       Maintainer: ops@example.com
       Description: Declarative infrastructure convergence (pipeline build)
+    # Dependency ordering
     depends_on: [staging-tree]
     tags: [pipeline, deb]
     resource_group: pipeline
 
   output-dir:
+    # Deploy managed configuration file
     type: file
     machine: pipeline-host
     state: directory
@@ -91,6 +103,7 @@ resources:
     resource_group: pipeline
 
   repo-pool:
+    # Deploy managed configuration file
     type: file
     machine: pipeline-host
     state: directory
@@ -101,6 +114,7 @@ resources:
     resource_group: pipeline
 
   pipeline-script:
+    # Deploy managed configuration file
     type: file
     machine: pipeline-host
     path: /usr/local/bin/forjar-pipeline.sh

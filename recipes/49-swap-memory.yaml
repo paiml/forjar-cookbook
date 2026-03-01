@@ -10,6 +10,10 @@ version: '1.0'
 name: swap-memory
 description: "Swap and memory management with swapfile, sysctl tuning, and OOM configuration"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   swap_size_mb: "2048"
   swap_path: /swapfile
@@ -33,6 +37,7 @@ machines:
 
 resources:
   swap-setup-script:
+    # Deploy managed configuration file
     type: file
     machine: swap-host
     path: /usr/local/bin/forjar-swap-setup.sh
@@ -58,11 +63,13 @@ resources:
     resource_group: swap-memory
 
   swap-reboot-cron:
+    # Schedule automated task execution
     type: cron
     machine: swap-host
     schedule: "0 0 * * *"
     command: "/usr/local/bin/forjar-swap-setup.sh 2>/dev/null || true"
     name: forjar-swap-setup
+    # Dependency ordering
     depends_on: [swap-setup-script]
     tags: [swap, cron]
     resource_group: swap-memory

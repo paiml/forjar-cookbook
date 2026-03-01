@@ -10,6 +10,10 @@ version: '1.0'
 name: toolchain-pin
 description: "Toolchain version pinning with drift detection for Rust, Python, Node, and Go"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   rust_version: 1.82.0
   python_version: "3.11"
@@ -32,6 +36,7 @@ machines:
 
 resources:
   toolchain-dir:
+    # Deploy managed configuration file
     type: file
     machine: toolchain-host
     state: directory
@@ -42,6 +47,7 @@ resources:
     resource_group: toolchain
 
   rust-version-pin:
+    # Deploy managed configuration file
     type: file
     machine: toolchain-host
     path: /etc/forjar/toolchain.d/rust
@@ -51,11 +57,13 @@ resources:
       # Managed by forjar — Rust toolchain pin
       version={{params.rust_version}}
       channel=stable
+    # Dependency ordering
     depends_on: [toolchain-dir]
     tags: [toolchain, rust]
     resource_group: toolchain
 
   python-version-pin:
+    # Deploy managed configuration file
     type: file
     machine: toolchain-host
     path: /etc/forjar/toolchain.d/python

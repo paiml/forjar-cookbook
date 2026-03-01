@@ -11,6 +11,10 @@ version: '1.0'
 name: refactored-stack
 description: "Declarative resource renaming with moved blocks (no destroy + create)"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   app_name: web-app
 

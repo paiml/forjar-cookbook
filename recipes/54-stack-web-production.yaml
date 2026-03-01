@@ -11,6 +11,10 @@ version: '1.0'
 name: stack-web-production
 description: "Composed stack: security + web + database + monitoring + secrets + TLS"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   domain: example.com
   db_name: appdb
@@ -33,6 +37,7 @@ machines:
 resources:
   # --- Layer 1: Security ---
   security-config:
+    # Deploy managed configuration file
     type: file
     machine: target
     path: /etc/ssh/sshd_config.d/forjar-hardened.conf
@@ -46,6 +51,7 @@ resources:
 
   # --- Layer 2: Web Server ---
   web-packages:
+    # Ensure required packages are installed and up-to-date
     type: package
     machine: target
     provider: apt

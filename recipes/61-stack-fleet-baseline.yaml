@@ -11,6 +11,10 @@ version: '1.0'
 name: stack-fleet-baseline
 description: "Composed stack: security baseline + fleet provisioning + monitoring"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   fleet_name: production
 
@@ -32,6 +36,7 @@ machines:
 resources:
   # --- Layer 1: Security ---
   security-packages:
+    # Ensure required packages are installed and up-to-date
     type: package
     machine: target
     provider: apt
@@ -41,6 +46,7 @@ resources:
     resource_group: security
 
   sshd-hardening:
+    # Deploy managed configuration file
     type: file
     machine: target
     path: /etc/ssh/sshd_config.d/forjar-fleet.conf

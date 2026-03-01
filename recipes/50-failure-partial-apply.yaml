@@ -11,6 +11,10 @@ version: '1.0'
 name: failure-partial-apply
 description: "Failure mode test: partial apply with dependency skip"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   test_dir: /tmp/forjar-test
   test_name: partial-apply

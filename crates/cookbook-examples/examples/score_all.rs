@@ -87,12 +87,13 @@ fn score_recipes(recipes: &mut [RecipeQualification], recipes_dir: &Path) -> (u3
 
         // Reconstruct RuntimeData from CSV for previously-qualified recipes.
         let runtime = runtime_from_csv(recipe);
+        let budget_ms = parse_budget_from_yaml(&raw_yaml);
         let input = ScoringInput {
             status: &recipe.status,
             idempotency_class: &recipe.idempotency_class,
             config: &config,
             raw_yaml: &raw_yaml,
-            budget_ms: 0,
+            budget_ms,
             runtime: runtime.as_ref(),
         };
 
@@ -100,11 +101,14 @@ fn score_recipes(recipes: &mut [RecipeQualification], recipes_dir: &Path) -> (u3
         apply_score(recipe, &score);
 
         eprintln!(
-            "  {:>2} {:<35} score={:>3} grade={} SAF={:>3} OBS={:>3} DOC={:>3} RES={:>3} CMP={:>3}",
+            "  {:>2} {:<35} score={:>3} grade={} COR={:>3} IDM={:>3} PRF={:>3} SAF={:>3} OBS={:>3} DOC={:>3} RES={:>3} CMP={:>3}",
             recipe.recipe_num,
             recipe.name,
             score.composite,
             score.grade.as_str(),
+            score.dimensions.cor,
+            score.dimensions.idm,
+            score.dimensions.prf,
             score.dimensions.saf,
             score.dimensions.obs,
             score.dimensions.doc,
@@ -152,6 +156,31 @@ fn runtime_from_csv(recipe: &RecipeQualification) -> Option<RuntimeData> {
         state_lock_written: true,
         all_resources_converged: true,
     })
+}
+
+/// Parse budget from YAML header comment like `# Budget: first_apply < 60s`.
+/// Returns budget in milliseconds, or 0 if not found.
+fn parse_budget_from_yaml(yaml: &str) -> u64 {
+    for line in yaml.lines().take(10) {
+        let trimmed = line.trim();
+        if trimmed.starts_with("# Budget:") {
+            // Extract "first_apply < 60s" — find the number right after "<"
+            if let Some(idx) = trimmed.find("first_apply") {
+                let rest = &trimmed[idx..];
+                if let Some(lt_idx) = rest.find('<') {
+                    // Get text after "<", trim, take first token
+                    let after_lt = rest[lt_idx + 1..].trim();
+                    let token = after_lt.split([',', ' ']).next().unwrap_or("");
+                    if let Some(num_str) = token.strip_suffix('s') {
+                        if let Ok(secs) = num_str.parse::<u64>() {
+                            return secs * 1000;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    0
 }
 
 /// Find a recipe file by number prefix in the recipes directory.

@@ -11,6 +11,10 @@ version: '1.0'
 name: refresh-only-test
 description: "Drift acceptance mode — update state to match reality without re-converging"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   app_name: hotfix-app
 

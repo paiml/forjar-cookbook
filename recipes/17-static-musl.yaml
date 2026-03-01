@@ -10,6 +10,10 @@ version: '1.0'
 name: static-musl-build
 description: "Static musl binary build with size optimization and optional UPX compression"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   crate_name: forjar
   target_path: /usr/local/bin/forjar-static
@@ -32,6 +36,7 @@ machines:
 
 resources:
   musl-toolchain:
+    # Ensure required packages are installed and up-to-date
     type: package
     machine: musl-host
     provider: apt
@@ -44,6 +49,7 @@ resources:
     resource_group: musl-build
 
   rust-musl-setup:
+    # Deploy managed configuration file
     type: file
     machine: musl-host
     path: /usr/local/bin/forjar-musl-setup.sh
@@ -61,11 +67,13 @@ resources:
         export PATH="$HOME/.cargo/bin:$PATH"
       fi
       rustup target add x86_64-unknown-linux-musl 2>/dev/null || true
+    # Dependency ordering
     depends_on: [musl-toolchain]
     tags: [rust, musl, toolchain]
     resource_group: musl-build
 
   build-static-script:
+    # Deploy managed configuration file
     type: file
     machine: musl-host
     path: /usr/local/bin/forjar-static-build.sh
@@ -83,6 +91,7 @@ resources:
       cargo install --target x86_64-unknown-linux-musl \
         --root /tmp/{{params.crate_name}}-build --force {{params.crate_name}} 2>/dev/null || \
         echo "Static build skipped — crate not available"
+    # Dependency ordering
     depends_on: [rust-musl-setup]
     tags: [rust, musl, build]
     resource_group: musl-build

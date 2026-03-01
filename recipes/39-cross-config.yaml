@@ -11,6 +11,10 @@ version: '1.0'
 name: cross-config-outputs
 description: "Multi-stack composition via cross-config output sharing"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   network_cidr: "10.0.1.0/24"
   gateway_ip: "10.0.1.1"

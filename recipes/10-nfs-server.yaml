@@ -10,6 +10,10 @@ version: '1.0'
 name: nfs-file-server
 description: "NFS file server with exports, firewall, and automated service management"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   export_path: /srv/nfs/shared
   allowed_network: "192.168.0.0/24"
@@ -25,6 +29,7 @@ machines:
 
 resources:
   nfs-pkg:
+    # Ensure required packages are installed and up-to-date
     type: package
     machine: nfs-host
     provider: apt
@@ -34,17 +39,20 @@ resources:
     resource_group: nfs
 
   export-dir:
+    # Deploy managed configuration file
     type: file
     machine: nfs-host
     state: directory
     path: "{{params.export_path}}"
     owner: root
     mode: '0755'
+    # Dependency ordering
     depends_on: [nfs-pkg]
     tags: [nfs, storage]
     resource_group: nfs
 
   exports-config:
+    # Deploy managed configuration file
     type: file
     machine: nfs-host
     path: /etc/exports

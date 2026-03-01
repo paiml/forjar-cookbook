@@ -10,6 +10,10 @@ version: '1.0'
 name: scheduled-tasks
 description: "Scheduled task management with backup, log cleanup, and cron auditing"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   backup_dir: /var/backups
   log_retention_days: "30"
@@ -32,6 +36,7 @@ machines:
 
 resources:
   backup-dir:
+    # Deploy managed configuration file
     type: file
     machine: cron-host
     state: directory
@@ -42,6 +47,7 @@ resources:
     resource_group: scheduled-tasks
 
   backup-script:
+    # Deploy managed configuration file
     type: file
     machine: cron-host
     path: /usr/local/bin/forjar-backup.sh
@@ -54,21 +60,25 @@ resources:
       mkdir -p "$DEST"
       tar czf "$DEST/etc.tar.gz" /etc/
       dpkg --get-selections > "$DEST/packages.list"
+    # Dependency ordering
     depends_on: [backup-dir]
     tags: [cron, backup]
     resource_group: scheduled-tasks
 
   backup-cron:
+    # Schedule automated task execution
     type: cron
     machine: cron-host
     schedule: "0 2 * * *"
     command: "/usr/local/bin/forjar-backup.sh"
     name: forjar-backup
+    # Dependency ordering
     depends_on: [backup-script]
     tags: [cron, backup]
     resource_group: scheduled-tasks
 
   log-cleanup-script:
+    # Deploy managed configuration file
     type: file
     machine: cron-host
     path: /usr/local/bin/forjar-log-cleanup.sh

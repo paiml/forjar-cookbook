@@ -11,6 +11,10 @@ version: '1.0'
 name: multi-project-workspace
 description: "Multi-project workspace with shared base packages and project-specific overlays"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   workspace_name: sovereign-ai
   base_packages: "build-essential,curl,git,pkg-config"
@@ -36,6 +40,7 @@ machines:
 resources:
   # --- Shared Base Layer ---
   base-packages:
+    # Ensure required packages are installed and up-to-date
     type: package
     machine: workspace
     provider: apt
@@ -48,6 +53,7 @@ resources:
     resource_group: base-layer
 
   workspace-dir:
+    # Deploy managed configuration file
     type: file
     machine: workspace
     state: directory

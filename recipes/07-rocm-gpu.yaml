@@ -10,6 +10,10 @@ version: '1.0'
 name: rocm-gpu-workstation
 description: "AMD GPU workstation with ROCm userspace, driver verification, and health monitoring"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   gpu_name: gpu0
   driver_version: ""
@@ -26,6 +30,7 @@ machines:
 
 resources:
   amd-gpu:
+    # Configure gpu resource
     type: gpu
     machine: gpu-host
     name: "{{params.gpu_name}}"
@@ -38,10 +43,12 @@ resources:
     resource_group: gpu
 
   gpu-user-groups:
+    # Manage user account and permissions
     type: user
     machine: gpu-host
     name: "{{params.user}}"
     groups: [video, render]
+    # Dependency ordering
     depends_on: [amd-gpu]
     tags: [gpu, user]
     resource_group: gpu

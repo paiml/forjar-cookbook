@@ -11,6 +11,10 @@ version: '1.0'
 name: apr-model-pipeline
 description: "APR compiled model pipeline with download, conversion, compilation, and service deployment"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   model_name: smollm2
   install_dir: /opt/apr
@@ -35,6 +39,7 @@ machines:
 
 resources:
   apr-dirs:
+    # Deploy managed configuration file
     type: file
     machine: model-host
     state: directory
@@ -45,6 +50,7 @@ resources:
     resource_group: apr-model
 
   apr-bin-dir:
+    # Deploy managed configuration file
     type: file
     machine: model-host
     state: directory
@@ -55,6 +61,7 @@ resources:
     resource_group: apr-model
 
   model-download-script:
+    # Deploy managed configuration file
     type: file
     machine: model-host
     path: /usr/local/bin/apr-model-download.sh
@@ -68,11 +75,13 @@ resources:
       echo "For CI: using placeholder model"
       echo '{"model": "{{params.model_name}}", "format": "gguf", "quantization": "q4_k_m"}' > \
         "$MODEL_DIR/model-info.json"
+    # Dependency ordering
     depends_on: [apr-dirs]
     tags: [apr, download]
     resource_group: apr-model
 
   model-convert-script:
+    # Deploy managed configuration file
     type: file
     machine: model-host
     path: /usr/local/bin/apr-model-convert.sh
@@ -84,11 +93,13 @@ resources:
       echo "Model conversion: GGUF -> APR format"
       echo "apr convert --input source.gguf --output model.apr --quantization q4_k_m"
       touch {{params.install_dir}}/models/model.apr
+    # Dependency ordering
     depends_on: [model-download-script]
     tags: [apr, convert]
     resource_group: apr-model
 
   model-compile-script:
+    # Deploy managed configuration file
     type: file
     machine: model-host
     path: /usr/local/bin/apr-model-compile.sh
@@ -104,11 +115,13 @@ resources:
       echo "APR model server (placeholder) listening on port ${1:-{{params.serve_port}}}"
       STUB
       chmod 755 {{params.install_dir}}/bin/model-server
+    # Dependency ordering
     depends_on: [model-convert-script, apr-bin-dir]
     tags: [apr, compile]
     resource_group: apr-model
 
   service-unit:
+    # Deploy managed configuration file
     type: file
     machine: model-host
     path: /etc/systemd/system/apr-model.service

@@ -11,6 +11,10 @@ version: '1.0'
 name: check-blocks-test
 description: "Post-apply health check assertions for functional validation"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   app_port: "8080"
   health_path: /health
@@ -32,6 +36,7 @@ machines:
 
 resources:
   check-deps:
+    # Ensure required packages are installed and up-to-date
     type: package
     machine: target
     provider: apt
@@ -41,12 +46,14 @@ resources:
     resource_group: app
 
   app-dir:
+    # Deploy managed configuration file
     type: file
     machine: target
     state: directory
     path: /var/www/html
     owner: root
     mode: '0755'
+    # Dependency ordering
     depends_on: [check-deps]
     tags: [checks, app]
     resource_group: app

@@ -10,6 +10,10 @@ version: '1.0'
 name: apt-repo-management
 description: "Third-party APT repository with GPG keyring, sources list, and package installation"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   repo_name: docker
   arch: amd64
@@ -31,6 +35,7 @@ machines:
 
 resources:
   keyring-dir:
+    # Deploy managed configuration file
     type: file
     machine: repo-host
     state: directory
@@ -41,6 +46,7 @@ resources:
     resource_group: apt-repo
 
   gpg-key-script:
+    # Deploy managed configuration file
     type: file
     machine: repo-host
     path: /usr/local/bin/forjar-apt-key-{{params.repo_name}}.sh
@@ -54,11 +60,13 @@ resources:
       curl -fsSL 'https://download.{{params.repo_name}}.com/linux/ubuntu/gpg' | \
         gpg --dearmor -o "$KEYRING" 2>/dev/null
       chmod 644 "$KEYRING"
+    # Dependency ordering
     depends_on: [keyring-dir]
     tags: [apt-repo, gpg]
     resource_group: apt-repo
 
   sources-list:
+    # Deploy managed configuration file
     type: file
     machine: repo-host
     path: /etc/apt/sources.list.d/{{params.repo_name}}.list

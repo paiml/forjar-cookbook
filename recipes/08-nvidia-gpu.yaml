@@ -10,6 +10,10 @@ version: '1.0'
 name: nvidia-gpu-server
 description: "NVIDIA GPU server with CUDA, persistence mode, and container toolkit"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   driver_version: "550"
   cuda_version: "12.4"
@@ -26,6 +30,7 @@ machines:
 
 resources:
   nvidia-gpu:
+    # Configure gpu resource
     type: gpu
     machine: gpu-host
     name: nvidia-gpu0
@@ -38,11 +43,13 @@ resources:
     resource_group: gpu
 
   nvidia-container-toolkit:
+    # Ensure required packages are installed and up-to-date
     type: package
     machine: gpu-host
     provider: apt
     packages:
       - nvidia-container-toolkit
+    # Dependency ordering
     depends_on: [nvidia-gpu]
     tags: [gpu, nvidia, docker]
     resource_group: gpu

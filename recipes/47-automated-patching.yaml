@@ -10,6 +10,10 @@ version: '1.0'
 name: automated-patching
 description: "Automated security patching with unattended-upgrades and reboot scheduling"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   reboot_window: "02:00"
   reboot_day: Sun
@@ -32,6 +36,7 @@ machines:
 
 resources:
   apt-unattended:
+    # Ensure required packages are installed and up-to-date
     type: package
     machine: patch-host
     provider: apt
@@ -42,6 +47,7 @@ resources:
     resource_group: patching
 
   auto-upgrades-config:
+    # Deploy managed configuration file
     type: file
     machine: patch-host
     path: /etc/apt/apt.conf.d/20auto-upgrades
@@ -51,11 +57,13 @@ resources:
       APT::Periodic::Update-Package-Lists "1";
       APT::Periodic::Unattended-Upgrade "1";
       APT::Periodic::AutocleanInterval "7";
+    # Dependency ordering
     depends_on: [apt-unattended]
     tags: [patching, config]
     resource_group: patching
 
   unattended-config:
+    # Deploy managed configuration file
     type: file
     machine: patch-host
     path: /etc/apt/apt.conf.d/50unattended-upgrades
@@ -67,11 +75,13 @@ resources:
       };
       Unattended-Upgrade::Automatic-Reboot "true";
       Unattended-Upgrade::Automatic-Reboot-Time "{{params.reboot_window}}";
+    # Dependency ordering
     depends_on: [apt-unattended]
     tags: [patching, config]
     resource_group: patching
 
   reboot-check-script:
+    # Deploy managed configuration file
     type: file
     machine: patch-host
     path: /usr/local/bin/forjar-reboot-check.sh

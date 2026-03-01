@@ -11,6 +11,10 @@ version: '1.0'
 name: stack-build-farm
 description: "Composed stack: build sandbox + static musl binary + cross-compilation"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   output_dir: /tmp/build-farm
 
@@ -32,6 +36,7 @@ machines:
 resources:
   # --- Layer 1: Build Dependencies ---
   build-deps:
+    # Ensure required packages are installed and up-to-date
     type: package
     machine: target
     provider: apt
@@ -44,12 +49,14 @@ resources:
 
   # --- Layer 2: Build Sandbox ---
   sandbox-dir:
+    # Deploy managed configuration file
     type: file
     machine: target
     state: directory
     path: "{{params.output_dir}}/sandbox"
     owner: root
     mode: '0755'
+    # Dependency ordering
     depends_on: [build-deps]
     tags: [stack, sandbox]
     resource_group: sandbox

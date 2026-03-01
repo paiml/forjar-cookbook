@@ -10,6 +10,10 @@ version: '1.0'
 name: sovereign-stack-release
 description: "Full sovereign stack release pipeline building forjar, pmat, batuta, and pzsh"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   install_dir: /usr/local/bin
   source_dir: /home/noah/src
@@ -31,6 +35,7 @@ machines:
 
 resources:
   build-deps:
+    # Ensure required packages are installed and up-to-date
     type: package
     machine: build-host
     provider: apt
@@ -43,6 +48,7 @@ resources:
     resource_group: sovereign-build
 
   forjar-dir:
+    # Deploy managed configuration file
     type: file
     machine: build-host
     state: directory
@@ -53,6 +59,7 @@ resources:
     resource_group: sovereign-build
 
   build-forjar-script:
+    # Deploy managed configuration file
     type: file
     machine: build-host
     path: "{{params.install_dir}}/sovereign-build-forjar.sh"
@@ -66,11 +73,13 @@ resources:
       cargo install --root /tmp/sovereign-build --force forjar 2>/dev/null && \
         cp /tmp/sovereign-build/bin/forjar {{params.install_dir}}/forjar || \
         echo "forjar build skipped"
+    # Dependency ordering
     depends_on: [build-deps]
     tags: [sovereign, forjar]
     resource_group: sovereign-build
 
   build-pmat-script:
+    # Deploy managed configuration file
     type: file
     machine: build-host
     path: "{{params.install_dir}}/sovereign-build-pmat.sh"
@@ -84,11 +93,13 @@ resources:
       cargo install --root /tmp/sovereign-build --force pmat 2>/dev/null && \
         cp /tmp/sovereign-build/bin/pmat {{params.install_dir}}/pmat || \
         echo "pmat build skipped"
+    # Dependency ordering
     depends_on: [build-deps]
     tags: [sovereign, pmat]
     resource_group: sovereign-build
 
   build-batuta-script:
+    # Deploy managed configuration file
     type: file
     machine: build-host
     path: "{{params.install_dir}}/sovereign-build-batuta.sh"

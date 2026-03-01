@@ -11,6 +11,10 @@ version: '1.0'
 name: secure-baseline
 description: "Security hardening baseline with SSH lockdown, firewall, and fail2ban"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   ssh_port: "22"
   allowed_ssh_cidr: "0.0.0.0/0"
@@ -33,6 +37,7 @@ machines:
 
 resources:
   security-pkgs:
+    # Ensure required packages are installed and up-to-date
     type: package
     machine: target
     provider: apt
@@ -44,6 +49,7 @@ resources:
     resource_group: security
 
   sshd-config:
+    # Deploy managed configuration file
     type: file
     machine: target
     path: /etc/ssh/sshd_config
@@ -63,22 +69,26 @@ resources:
       ClientAliveCountMax 2
     owner: root
     mode: '0600'
+    # Dependency ordering
     depends_on: [security-pkgs]
     tags: [security, ssh]
     resource_group: ssh
 
   sshd-service:
+    # Manage system service lifecycle
     type: service
     machine: target
     name: sshd
     state: running
     enabled: true
     restart_on: [sshd-config]
+    # Dependency ordering
     depends_on: [sshd-config]
     tags: [security, ssh]
     resource_group: ssh
 
   fail2ban-config:
+    # Deploy managed configuration file
     type: file
     machine: target
     path: /etc/fail2ban/jail.local
@@ -97,6 +107,7 @@ resources:
       maxretry = {{params.fail2ban_maxretry}}
     owner: root
     mode: '0644'
+    # Dependency ordering
     depends_on: [security-pkgs]
     tags: [security, fail2ban]
     resource_group: security

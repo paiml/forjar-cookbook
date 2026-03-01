@@ -10,6 +10,10 @@ version: '1.0'
 name: cross-compile-pipeline
 description: "Cross-compilation pipeline for aarch64 targets with musl static linking"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   crate_name: forjar
   target_triple: aarch64-unknown-linux-musl
@@ -32,6 +36,7 @@ machines:
 
 resources:
   cross-toolchain:
+    # Ensure required packages are installed and up-to-date
     type: package
     machine: cross-host
     provider: apt
@@ -44,6 +49,7 @@ resources:
     resource_group: cross-build
 
   rust-setup-script:
+    # Deploy managed configuration file
     type: file
     machine: cross-host
     path: /usr/local/bin/forjar-cross-setup.sh
@@ -62,11 +68,13 @@ resources:
       fi
       rustup target add {{params.target_triple}} 2>/dev/null || true
       echo "Cross toolchain ready for {{params.target_triple}}"
+    # Dependency ordering
     depends_on: [cross-toolchain]
     tags: [rust, cross, setup]
     resource_group: cross-build
 
   cargo-config-dir:
+    # Deploy managed configuration file
     type: file
     machine: cross-host
     state: directory
@@ -77,6 +85,7 @@ resources:
     resource_group: cross-build
 
   cargo-config:
+    # Deploy managed configuration file
     type: file
     machine: cross-host
     path: /root/.cargo/config.toml
@@ -86,11 +95,13 @@ resources:
       # Managed by forjar — cross-compilation config
       [target.{{params.target_triple}}]
       linker = "aarch64-linux-gnu-gcc"
+    # Dependency ordering
     depends_on: [cargo-config-dir]
     tags: [rust, cross, config]
     resource_group: cross-build
 
   output-dir:
+    # Deploy managed configuration file
     type: file
     machine: cross-host
     state: directory

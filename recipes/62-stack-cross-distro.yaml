@@ -11,6 +11,10 @@ version: '1.0'
 name: stack-cross-distro
 description: "Composed stack: static build + deb package + RPM build + distribution pipeline"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   package_name: forjar
   package_version: 1.0.0
@@ -33,6 +37,7 @@ machines:
 resources:
   # --- Stage 1: Build ---
   build-deps:
+    # Ensure required packages are installed and up-to-date
     type: package
     machine: target
     provider: apt
@@ -43,29 +48,34 @@ resources:
     resource_group: build
 
   build-output-dir:
+    # Deploy managed configuration file
     type: file
     machine: target
     state: directory
     path: /tmp/cross-distro/build
     owner: root
     mode: '0755'
+    # Dependency ordering
     depends_on: [build-deps]
     tags: [stack, build]
     resource_group: build
 
   # --- Stage 2: Deb Package ---
   deb-staging:
+    # Deploy managed configuration file
     type: file
     machine: target
     state: directory
     path: /tmp/cross-distro/deb
     owner: root
     mode: '0755'
+    # Dependency ordering
     depends_on: [build-output-dir]
     tags: [stack, deb]
     resource_group: deb
 
   deb-control:
+    # Deploy managed configuration file
     type: file
     machine: target
     path: /tmp/cross-distro/deb/DEBIAN/control

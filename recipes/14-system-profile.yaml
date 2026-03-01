@@ -11,6 +11,10 @@ version: '1.0'
 name: system-profile
 description: "Full-machine declarative profile composing dev tools, security, toolchain, and monitoring"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   user: dev
   home: /home/dev
@@ -36,6 +40,7 @@ machines:
 resources:
   # --- Base: Developer Tools ---
   dev-packages:
+    # Ensure required packages are installed and up-to-date
     type: package
     machine: target
     provider: apt
@@ -51,17 +56,20 @@ resources:
     resource_group: base
 
   dev-user:
+    # Manage user account and permissions
     type: user
     machine: target
     name: "{{params.user}}"
     home: "{{params.home}}"
     shell: /bin/bash
     groups: [sudo]
+    # Dependency ordering
     depends_on: [dev-packages]
     tags: [profile, user]
     resource_group: base
 
   home-dir:
+    # Deploy managed configuration file
     type: file
     machine: target
     state: directory

@@ -10,6 +10,10 @@ version: '1.0'
 name: resource-limits
 description: "System resource limits with ulimits, file descriptors, and process controls"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   nofile_soft: "65535"
   nofile_hard: "131072"
@@ -34,6 +38,7 @@ machines:
 
 resources:
   limits-global:
+    # Deploy managed configuration file
     type: file
     machine: limits-host
     path: /etc/security/limits.d/99-forjar.conf
@@ -50,6 +55,7 @@ resources:
     resource_group: resource-limits
 
   limits-service-users:
+    # Deploy managed configuration file
     type: file
     machine: limits-host
     path: /etc/security/limits.d/98-forjar-services.conf

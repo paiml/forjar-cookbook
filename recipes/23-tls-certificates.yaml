@@ -10,6 +10,10 @@ version: '1.0'
 name: tls-certificates
 description: "TLS certificate lifecycle with self-signed generation, renewal, and expiry monitoring"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   domain: example.com
   cert_dir: /etc/ssl/forjar
@@ -33,6 +37,7 @@ machines:
 
 resources:
   cert-dir:
+    # Deploy managed configuration file
     type: file
     machine: tls-host
     state: directory
@@ -43,17 +48,20 @@ resources:
     resource_group: tls
 
   private-key-dir:
+    # Deploy managed configuration file
     type: file
     machine: tls-host
     state: directory
     path: "{{params.cert_dir}}/{{params.domain}}/private"
     owner: root
     mode: '0700'
+    # Dependency ordering
     depends_on: [cert-dir]
     tags: [tls, dirs]
     resource_group: tls
 
   self-signed-gen-script:
+    # Deploy managed configuration file
     type: file
     machine: tls-host
     path: /usr/local/bin/forjar-gen-selfsigned.sh
@@ -75,6 +83,7 @@ resources:
       chmod 600 "$KEY"
       chmod 644 "$CERT"
       echo "Self-signed certificate generated for {{params.domain}}"
+    # Dependency ordering
     depends_on: [private-key-dir]
     tags: [tls, generation]
     resource_group: tls

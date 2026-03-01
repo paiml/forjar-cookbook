@@ -1,0 +1,8 @@
+# Shared notification hooks for forjar-cookbook recipes
+# Included by all recipes for consistent alerting
+
+policy:
+  notify:
+    on_success: "echo 'Recipe completed successfully'"
+    on_failure: "echo 'Recipe apply failed'"
+    on_drift: "echo 'Configuration drift detected'"

@@ -12,6 +12,10 @@ version: '1.0'
 name: failure-idempotent-crash
 description: "Failure mode test: clean convergence after interrupted or updated apply"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   test_dir: /tmp/crash-test
   test_name: idempotent-crash

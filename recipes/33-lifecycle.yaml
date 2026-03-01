@@ -11,6 +11,10 @@ version: '1.0'
 name: lifecycle-protection
 description: "Lifecycle protection rules for stateful and critical resources"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   db_data_dir: /var/lib/postgresql/15/main
   app_config_dir: /etc/app
@@ -74,6 +78,7 @@ resources:
         port: 5432
       server:
         port: 8080
+    depends_on: [db-data-dir]
     lifecycle:
       create_before_destroy: true
     tags: [lifecycle, app]

@@ -11,6 +11,10 @@ version: '1.0'
 name: stack-dev-server
 description: "Composed stack: secure baseline + developer workstation + toolchain pin"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   user: dev
   home: /home/dev
@@ -34,6 +38,7 @@ machines:
 resources:
   # --- Layer 1: Security Baseline ---
   security-packages:
+    # Ensure required packages are installed and up-to-date
     type: package
     machine: target
     provider: apt
@@ -43,6 +48,7 @@ resources:
     resource_group: security
 
   sshd-hardening:
+    # Deploy managed configuration file
     type: file
     machine: target
     path: /etc/ssh/sshd_config.d/forjar-hardened.conf
@@ -53,6 +59,7 @@ resources:
       PermitRootLogin no
       PasswordAuthentication no
       MaxAuthTries 3
+    # Dependency ordering
     depends_on: [security-packages]
     tags: [stack, security]
     resource_group: security

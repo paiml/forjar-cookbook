@@ -10,6 +10,10 @@ version: '1.0'
 name: monitoring-stack
 description: "Prometheus + Grafana monitoring with node_exporter and alerting"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   prometheus_port: "9090"
   grafana_port: "3000"
@@ -34,6 +38,7 @@ machines:
 # Prometheus → Grafana → node_exporter observability pipeline
 resources:
   prometheus-data:
+    # Deploy managed configuration file
     type: file
     machine: monitor
     state: directory
@@ -44,6 +49,7 @@ resources:
     resource_group: prometheus
 
   prometheus-config:
+    # Deploy managed configuration file
     type: file
     machine: monitor
     path: /etc/prometheus/prometheus.yml
@@ -61,11 +67,13 @@ resources:
             - targets: ['{{params.scrape_targets}}']
     owner: root
     mode: '0644'
+    # Dependency ordering
     depends_on: [prometheus-data]
     tags: [monitoring, prometheus, config]
     resource_group: prometheus
 
   prometheus:
+    # Configure docker resource
     type: docker
     machine: monitor
     name: forjar-prometheus
@@ -77,11 +85,13 @@ resources:
       - "/var/lib/prometheus:/prometheus"
     command: "--config.file=/etc/prometheus/prometheus.yml --storage.tsdb.retention.time={{params.retention_days}}d"
     restart: always
+    # Dependency ordering
     depends_on: [prometheus-config]
     tags: [monitoring, prometheus, docker]
     resource_group: prometheus
 
   grafana-data:
+    # Deploy managed configuration file
     type: file
     machine: monitor
     state: directory
@@ -92,6 +102,7 @@ resources:
     resource_group: grafana
 
   grafana:
+    # Configure docker resource
     type: docker
     machine: monitor
     name: forjar-grafana
@@ -104,11 +115,13 @@ resources:
       - "GF_SECURITY_ADMIN_PASSWORD=admin"
       - "GF_USERS_ALLOW_SIGN_UP=false"
     restart: always
+    # Dependency ordering
     depends_on: [grafana-data]
     tags: [monitoring, grafana, docker]
     resource_group: grafana
 
   node-exporter:
+    # Configure docker resource
     type: docker
     machine: monitor
     name: forjar-node-exporter
@@ -125,6 +138,7 @@ resources:
     resource_group: monitoring
 
   firewall-grafana:
+    # Configure network resource
     type: network
     machine: monitor
     protocol: tcp

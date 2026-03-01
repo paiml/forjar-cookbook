@@ -11,6 +11,10 @@ version: '1.0'
 name: kernel-tuning
 description: "Production kernel tuning with sysctl for network, memory, security, and file limits"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   max_connections: "65535"
   swappiness: "10"
@@ -73,6 +77,7 @@ resources:
     path: /etc/sysctl.d/60-forjar-security.conf
     owner: root
     mode: '0644'
+    depends_on: [sysctl-network]
     content: |
       # Managed by forjar — security hardening
       # ICMP hardening

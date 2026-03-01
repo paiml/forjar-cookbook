@@ -10,6 +10,10 @@ version: '1.0'
 name: deb-package-build
 description: "Build .deb package from binary with control file, systemd unit, and verification"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   pkg_name: forjar
   pkg_version: 1.0.0
@@ -34,6 +38,7 @@ machines:
 
 resources:
   build-deps:
+    # Ensure required packages are installed and up-to-date
     type: package
     machine: deb-host
     provider: apt
@@ -43,28 +48,33 @@ resources:
     resource_group: deb-build
 
   staging-dir:
+    # Deploy managed configuration file
     type: file
     machine: deb-host
     state: directory
     path: /tmp/deb-build/{{params.pkg_name}}/DEBIAN
     owner: root
     mode: '0755'
+    # Dependency ordering
     depends_on: [build-deps]
     tags: [deb, staging]
     resource_group: deb-build
 
   bin-dir:
+    # Deploy managed configuration file
     type: file
     machine: deb-host
     state: directory
     path: /tmp/deb-build/{{params.pkg_name}}/usr/local/bin
     owner: root
     mode: '0755'
+    # Dependency ordering
     depends_on: [staging-dir]
     tags: [deb, staging]
     resource_group: deb-build
 
   control-file:
+    # Deploy managed configuration file
     type: file
     machine: deb-host
     path: /tmp/deb-build/{{params.pkg_name}}/DEBIAN/control
@@ -77,11 +87,13 @@ resources:
       Maintainer: {{params.pkg_maintainer}}
       Description: {{params.pkg_description}}
        Forjar converges machine state to a declared YAML configuration.
+    # Dependency ordering
     depends_on: [staging-dir]
     tags: [deb, control]
     resource_group: deb-build
 
   output-dir:
+    # Deploy managed configuration file
     type: file
     machine: deb-host
     state: directory

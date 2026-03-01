@@ -10,6 +10,10 @@ version: '1.0'
 name: hostname-locale
 description: "Machine identity with hostname, locale configuration, and DNS resolution"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   hostname: forjar-node
   domain: ""
@@ -33,6 +37,7 @@ machines:
 
 resources:
   hostname-file:
+    # Deploy managed configuration file
     type: file
     machine: identity-host
     path: /etc/hostname
@@ -43,11 +48,13 @@ resources:
     resource_group: identity
 
   hosts-file:
+    # Deploy managed configuration file
     type: file
     machine: identity-host
     path: /etc/hosts
     owner: root
     mode: '0644'
+    depends_on: [hostname-file]
     content: |
       127.0.0.1 localhost
       127.0.1.1 {{params.hostname}}
@@ -59,6 +66,7 @@ resources:
     resource_group: identity
 
   locale-gen:
+    # Deploy managed configuration file
     type: file
     machine: identity-host
     path: /etc/locale.gen
@@ -71,6 +79,7 @@ resources:
     resource_group: identity
 
   default-locale:
+    # Deploy managed configuration file
     type: file
     machine: identity-host
     path: /etc/default/locale
@@ -79,16 +88,19 @@ resources:
     content: |
       LANG=en_US.UTF-8
       LC_ALL=en_US.UTF-8
+    # Dependency ordering
     depends_on: [locale-gen]
     tags: [identity, locale]
     resource_group: identity
 
   resolved-config:
+    # Deploy managed configuration file
     type: file
     machine: identity-host
     path: /etc/systemd/resolved.conf.d/forjar.conf
     owner: root
     mode: '0644'
+    # Dependency ordering
     depends_on: [resolved-conf-dir]
     content: |
       [Resolve]

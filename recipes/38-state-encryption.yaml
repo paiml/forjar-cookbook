@@ -11,6 +11,10 @@ version: '1.0'
 name: state-encryption-test
 description: "State file encryption at rest using age for defense-in-depth"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   key_dir: /etc/forjar/keys
   state_dir: /var/lib/forjar/state

@@ -1,0 +1,8 @@
+# Shared policy defaults for forjar-cookbook recipes
+# Included by all recipes for consistent failure handling and observability
+
+policy:
+  failure: continue_independent
+  ssh_retries: 3
+  tripwire: true
+  lock_file: true

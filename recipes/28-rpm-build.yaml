@@ -10,6 +10,10 @@ version: '1.0'
 name: rpm-package-build
 description: "RPM package build with spec file generation, rpmbuild, and verification"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   pkg_name: forjar
   pkg_version: 1.0.0
@@ -35,6 +39,7 @@ machines:
 
 resources:
   rpm-deps:
+    # Ensure required packages are installed and up-to-date
     type: package
     machine: rpm-host
     provider: apt
@@ -44,28 +49,33 @@ resources:
     resource_group: rpm-build
 
   rpmbuild-dir:
+    # Deploy managed configuration file
     type: file
     machine: rpm-host
     state: directory
     path: /root/rpmbuild/SPECS
     owner: root
     mode: '0755'
+    # Dependency ordering
     depends_on: [rpm-deps]
     tags: [rpm, dirs]
     resource_group: rpm-build
 
   rpmbuild-sources:
+    # Deploy managed configuration file
     type: file
     machine: rpm-host
     state: directory
     path: /root/rpmbuild/SOURCES
     owner: root
     mode: '0755'
+    # Dependency ordering
     depends_on: [rpm-deps]
     tags: [rpm, dirs]
     resource_group: rpm-build
 
   spec-file:
+    # Deploy managed configuration file
     type: file
     machine: rpm-host
     path: /root/rpmbuild/SPECS/{{params.pkg_name}}.spec
@@ -90,11 +100,13 @@ resources:
 
       %files
       /usr/local/bin/{{params.pkg_name}}
+    # Dependency ordering
     depends_on: [rpmbuild-dir]
     tags: [rpm, spec]
     resource_group: rpm-build
 
   output-dir:
+    # Deploy managed configuration file
     type: file
     machine: rpm-host
     state: directory
@@ -105,6 +117,7 @@ resources:
     resource_group: rpm-build
 
   build-script:
+    # Deploy managed configuration file
     type: file
     machine: rpm-host
     path: /usr/local/bin/forjar-rpm-build.sh

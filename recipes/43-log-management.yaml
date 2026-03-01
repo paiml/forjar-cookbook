@@ -10,6 +10,10 @@ version: '1.0'
 name: log-management
 description: "Log management with journald tuning, logrotate, and disk usage alerting"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   journal_max_disk: 500M
   journal_max_age: 30d
@@ -33,6 +37,7 @@ machines:
 
 resources:
   logrotate-pkg:
+    # Ensure required packages are installed and up-to-date
     type: package
     machine: log-host
     provider: apt
@@ -42,11 +47,13 @@ resources:
     resource_group: log-management
 
   journald-config:
+    # Deploy managed configuration file
     type: file
     machine: log-host
     path: /etc/systemd/journald.conf.d/forjar.conf
     owner: root
     mode: '0644'
+    depends_on: [journald-conf-dir]
     content: |
       [Journal]
       SystemMaxUse={{params.journal_max_disk}}
@@ -58,6 +65,7 @@ resources:
     resource_group: log-management
 
   journald-conf-dir:
+    # Deploy managed configuration file
     type: file
     machine: log-host
     state: directory
@@ -68,6 +76,7 @@ resources:
     resource_group: log-management
 
   app-logrotate:
+    # Deploy managed configuration file
     type: file
     machine: log-host
     path: /etc/logrotate.d/forjar-apps
@@ -83,21 +92,25 @@ resources:
           notifempty
           create 0640 root adm
       }
+    # Dependency ordering
     depends_on: [logrotate-pkg]
     tags: [logs, logrotate]
     resource_group: log-management
 
   logrotate-test-cron:
+    # Schedule automated task execution
     type: cron
     machine: log-host
     schedule: "0 */6 * * *"
     command: "logrotate -d /etc/logrotate.d/forjar-apps 2>&1 | logger -t forjar-logrotate || true"
     name: forjar-logrotate-test
+    # Dependency ordering
     depends_on: [app-logrotate]
     tags: [logs, audit]
     resource_group: log-management
 
   disk-alert-script:
+    # Deploy managed configuration file
     type: file
     machine: log-host
     path: /usr/local/bin/forjar-disk-alert.sh

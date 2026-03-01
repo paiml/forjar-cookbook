@@ -11,6 +11,10 @@ version: '1.0'
 name: resource-targeting-test
 description: "Surgical resource targeting for debugging and partial recovery"
 
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
 params:
   target_resource: app-config
 
