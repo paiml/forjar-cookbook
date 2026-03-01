@@ -146,8 +146,9 @@ impl RecipeRunner {
         }
 
         let idempotent_apply = self.apply(config, state_dir);
-        let idempotent =
-            idempotent_apply.exit_code == 0 && idempotent_apply.output.contains("0 changed");
+        let idempotent = idempotent_apply.exit_code == 0
+            && (idempotent_apply.output.contains("0 changed")
+                || idempotent_apply.output.contains("0 converged"));
 
         QualifyResult {
             validate,
