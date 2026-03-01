@@ -1,4 +1,6 @@
-# Forjar Cookbook
+<p align="center">
+  <img src="assets/hero.svg" alt="Forjar Cookbook" width="900"/>
+</p>
 
 Qualification suite that proves forjar works on real infrastructure.
 
@@ -38,7 +40,7 @@ make update-qualifications
 ## Qualification Dashboard
 
 <!-- QUALIFICATION_TABLE_START -->
-**Qualification Summary** (updated: 2026-03-01 16:50 UTC)
+**Qualification Summary** (updated: 2026-03-01 16:51 UTC)
 
 | Status | Count |
 |--------|-------|
