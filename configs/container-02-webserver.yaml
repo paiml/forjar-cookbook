@@ -1,0 +1,71 @@
+# Container variant: 02-web-server
+# Tier: 2 (container-only)
+# Stripped: nginx service (systemd), firewall rules
+#
+# Installs nginx and site config without starting the service.
+
+version: '1.0'
+name: container-02-webserver
+description: "Container test: nginx package and site configuration"
+
+params:
+  domain: example.com
+  port: "443"
+
+machines:
+  webhost:
+    hostname: webhost
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-container-02-webserver
+      ephemeral: true
+      privileged: false
+      init: true
+
+resources:
+  nginx-pkg:
+    type: package
+    machine: webhost
+    provider: apt
+    packages: [nginx]
+
+  sites-dir:
+    type: file
+    machine: webhost
+    state: directory
+    path: /etc/nginx/sites-available
+    mode: '0755'
+    depends_on: [nginx-pkg]
+
+  site-config:
+    type: file
+    machine: webhost
+    path: "/etc/nginx/sites-available/{{params.domain}}"
+    content: |
+      server {
+          listen 80;
+          server_name {{params.domain}};
+          root /var/www/{{params.domain}};
+          index index.html;
+      }
+    mode: '0644'
+    depends_on: [sites-dir]
+
+  tls-dir:
+    type: file
+    machine: webhost
+    state: directory
+    path: "/etc/ssl/{{params.domain}}"
+    mode: '0700'
+
+  webroot:
+    type: file
+    machine: webhost
+    state: directory
+    path: "/var/www/{{params.domain}}"
+    mode: '0755'

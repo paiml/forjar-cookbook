@@ -1,0 +1,67 @@
+# Container variant: 05-redis-cache
+# Tier: 2 (container-only)
+# Stripped: redis service (systemd), sysctl tuning
+#
+# Installs Redis packages and configuration without starting the service.
+
+version: '1.0'
+name: container-05-redis
+description: "Container test: Redis packages and configuration"
+
+params:
+  max_memory: 256mb
+
+machines:
+  cache:
+    hostname: cache
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-container-05-redis
+      ephemeral: true
+      privileged: false
+      init: true
+
+resources:
+  redis-pkg:
+    type: package
+    machine: cache
+    provider: apt
+    packages: [redis-server]
+
+  redis-conf-dir:
+    type: file
+    machine: cache
+    state: directory
+    path: /etc/redis
+    mode: '0755'
+    depends_on: [redis-pkg]
+
+  redis-config:
+    type: file
+    machine: cache
+    path: /etc/redis/redis.conf
+    content: |
+      # Managed by forjar — redis-cache recipe
+      bind 127.0.0.1
+      port 6379
+      maxmemory {{params.max_memory}}
+      maxmemory-policy allkeys-lru
+      appendonly yes
+      appendfilename "appendonly.aof"
+    mode: '0644'
+    depends_on: [redis-conf-dir]
+
+  redis-data-dir:
+    type: file
+    machine: cache
+    state: directory
+    path: /var/lib/redis
+    owner: redis
+    group: redis
+    mode: '0750'
+    depends_on: [redis-pkg]

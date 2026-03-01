@@ -1,21 +1,109 @@
 # Infrastructure Recipes
 
+Core server provisioning recipes that form the foundation of the cookbook.
+These recipes cover the most common infrastructure patterns: developer
+workstations, web servers, databases, caching, monitoring, and security.
+
 ## #1 Developer Workstation
 
-Installs build tools, cargo utilities, git config, and shell profile.
+Provisions a development machine with build tools, dotfiles, directory
+structure, and shell configuration. This is the first cookbook recipe and
+validates the package, file, and user resource types end-to-end.
 
-**Resources**: dev-packages (apt), cargo-tools (cargo), gitconfig (file), profile-d (file)
+**Resources**: dev-packages (apt), dev-user (user), home-dir (file),
+gitconfig (file), vimrc (file), tmux-conf (file), shell-rc (file)
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 2+3 | **Idempotency**: Strong | **Budget**: <60s first, <2s second
 
 ## #2 Web Application Server
 
-Nginx with custom config, firewall rules, and service management.
+Nginx reverse proxy with TLS directory structure, site configuration,
+and firewall rules. Validates the service resource type with systemd
+integration and network/firewall resources.
+
+**Resources**: nginx-pkg (apt), site-config (file), tls-dir (file),
+nginx-service (service), firewall-http (network)
+
+**Tier**: 2+3 | **Idempotency**: Strong | **Budget**: <90s first, <3s second
+
+## #3 PostgreSQL Database
+
+PostgreSQL installation with data directory, authentication config,
+and connection tuning. Tests the service resource lifecycle with a
+stateful application.
+
+**Resources**: pg-packages (apt), pg-config (file), pg-hba (file),
+pg-data-dir (file), pg-service (service)
+
+**Tier**: 2+3 | **Idempotency**: Strong | **Budget**: <120s first, <3s second
+
+## #4 Monitoring Stack
+
+Prometheus and Grafana with scrape targets, dashboards, and alerting
+rules. Tests multi-service orchestration and configuration file
+management.
+
+**Resources**: monitoring-packages (apt), prometheus-config (file),
+grafana-provisioning (file), prometheus-dir (file), grafana-dir (file)
+
+**Tier**: 2+3 | **Idempotency**: Strong
+
+## #5 Redis Cache
+
+Redis installation with persistence config, memory limits, and
+eviction policy. Tests service configuration with custom settings
+and sysctl tuning for production workloads.
+
+**Resources**: redis-pkg (apt), redis-config (file), redis-data-dir (file),
+redis-service (service)
+
+**Tier**: 2+3 | **Idempotency**: Strong
+
+## #6 CI Runner
+
+Self-hosted CI runner with Docker, workspace directories, and build
+toolchain. Tests user creation, directory hierarchy, and service
+management for continuous integration.
+
+**Resources**: ci-packages (apt), runner-user (user), workspace-dir (file),
+workspace-builds (file), workspace-cache (file), docker-service (service)
+
+**Tier**: 2+3 | **Idempotency**: Strong
+
+## #7 ROCm GPU
+
+AMD ROCm userspace installation with kernel module verification and
+GPU compute setup. Tests the GPU resource type with `gpu_backend: rocm`.
+
+**Resources**: rocm-packages (apt), gpu-check (gpu), rocm-env (file)
+
+**Tier**: 3 | **Idempotency**: Strong | **Requires**: AMD GPU hardware
+
+## #8 NVIDIA GPU
+
+NVIDIA CUDA toolkit and driver installation with GPU compute setup.
+Tests the GPU resource type with `gpu_backend: nvidia`.
+
+**Resources**: nvidia-packages (apt), gpu-check (gpu), cuda-env (file)
+
+**Tier**: 3 | **Idempotency**: Strong | **Requires**: NVIDIA GPU hardware
 
 ## #9 Secure Baseline
 
-SSH hardening, fail2ban, UFW firewall defaults, unattended-upgrades.
+SSH hardening, fail2ban, firewall defaults, and unattended-upgrades.
+Establishes a security baseline that other recipes can build upon.
 
-**Resources**: security-pkgs (apt), sshd-config (file), fail2ban-config (file), firewall-ssh (network)
+**Resources**: security-pkgs (apt), sshd-config (file), fail2ban-config (file),
+firewall-ssh (network), sshd-service (service), fail2ban-service (service)
 
 **Tier**: 2+3 | **Idempotency**: Strong
+
+## #10 NFS Server
+
+NFS server with exports, directory structure, and service management.
+Tests mount resource type and cross-machine file sharing patterns.
+
+**Resources**: nfs-packages (apt), exports-config (file), share-dir (file),
+nfs-service (service)
+
+**Tier**: 3 | **Idempotency**: Strong | **Requires**: Bare-metal or VM

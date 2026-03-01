@@ -1,0 +1,58 @@
+# Container variant: 03-postgresql
+# Tier: 2 (container-only)
+# Stripped: postgresql service (systemd)
+#
+# Installs PostgreSQL packages and configuration without starting the service.
+
+version: '1.0'
+name: container-03-postgresql
+description: "Container test: PostgreSQL packages and configuration"
+
+params:
+  pg_version: "16"
+  data_dir: /var/lib/postgresql/data
+
+machines:
+  db-host:
+    hostname: db-host
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-container-03-postgresql
+      ephemeral: true
+      privileged: false
+      init: true
+
+resources:
+  pg-packages:
+    type: package
+    machine: db-host
+    provider: apt
+    packages:
+      - postgresql
+      - postgresql-client
+      - postgresql-contrib
+
+  pg-data-dir:
+    type: file
+    machine: db-host
+    state: directory
+    path: "{{params.data_dir}}"
+    owner: postgres
+    group: postgres
+    mode: '0700'
+    depends_on: [pg-packages]
+
+  pg-log-dir:
+    type: file
+    machine: db-host
+    state: directory
+    path: /var/log/postgresql
+    owner: postgres
+    group: postgres
+    mode: '0755'
+    depends_on: [pg-packages]

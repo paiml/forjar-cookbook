@@ -1,0 +1,64 @@
+# Container variant: 04-monitoring-stack
+# Tier: 2 (container-only)
+# Stripped: service management, network listeners
+#
+# Installs monitoring packages and creates configuration directories.
+
+version: '1.0'
+name: container-04-monitoring
+description: "Container test: monitoring packages and config directories"
+
+machines:
+  monitor:
+    hostname: monitor
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-container-04-monitoring
+      ephemeral: true
+      privileged: false
+      init: true
+
+resources:
+  monitoring-packages:
+    type: package
+    machine: monitor
+    provider: apt
+    packages:
+      - curl
+      - jq
+
+  prometheus-dir:
+    type: file
+    machine: monitor
+    state: directory
+    path: /etc/prometheus
+    mode: '0755'
+    depends_on: [monitoring-packages]
+
+  prometheus-config:
+    type: file
+    machine: monitor
+    path: /etc/prometheus/prometheus.yml
+    content: |
+      # Managed by forjar — monitoring-stack recipe
+      global:
+        scrape_interval: 15s
+        evaluation_interval: 15s
+      scrape_configs:
+        - job_name: 'node'
+          static_configs:
+            - targets: ['localhost:9100']
+    mode: '0644'
+    depends_on: [prometheus-dir]
+
+  grafana-dir:
+    type: file
+    machine: monitor
+    state: directory
+    path: /etc/grafana
+    mode: '0755'

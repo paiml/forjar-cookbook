@@ -1,0 +1,83 @@
+# Container variant: 06-ci-runner
+# Tier: 2 (container-only)
+# Stripped: docker service (systemd), systemd integration
+#
+# Installs CI runner packages and workspace structure.
+
+version: '1.0'
+name: container-06-ci-runner
+description: "Container test: CI runner packages and workspace directories"
+
+params:
+  runner_user: runner
+  workspace: /opt/ci-runner
+
+machines:
+  runner-host:
+    hostname: runner-host
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-container-06-ci-runner
+      ephemeral: true
+      privileged: false
+      init: true
+
+resources:
+  ci-packages:
+    type: package
+    machine: runner-host
+    provider: apt
+    packages:
+      - curl
+      - git
+      - jq
+      - build-essential
+
+  runner-user:
+    type: user
+    machine: runner-host
+    name: "{{params.runner_user}}"
+    home: "/home/{{params.runner_user}}"
+    shell: /bin/bash
+    depends_on: [ci-packages]
+
+  workspace-dir:
+    type: file
+    machine: runner-host
+    state: directory
+    path: "{{params.workspace}}"
+    owner: "{{params.runner_user}}"
+    mode: '0755'
+    depends_on: [runner-user]
+
+  workspace-builds:
+    type: file
+    machine: runner-host
+    state: directory
+    path: "{{params.workspace}}/builds"
+    owner: "{{params.runner_user}}"
+    mode: '0755'
+    depends_on: [workspace-dir]
+
+  workspace-cache:
+    type: file
+    machine: runner-host
+    state: directory
+    path: "{{params.workspace}}/cache"
+    owner: "{{params.runner_user}}"
+    mode: '0755'
+    depends_on: [workspace-dir]
+
+  workspace-logs:
+    type: file
+    machine: runner-host
+    state: directory
+    path: "{{params.workspace}}/logs"
+    owner: "{{params.runner_user}}"
+    mode: '0755'
+    depends_on: [workspace-dir]

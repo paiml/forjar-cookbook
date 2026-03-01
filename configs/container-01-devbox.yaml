@@ -1,0 +1,84 @@
+# Container variant: 01-developer-workstation
+# Tier: 2 (container-only)
+# Stripped: none (all resources are container-safe)
+#
+# Installs development packages and creates dotfiles in a container.
+
+version: '1.0'
+name: container-01-devbox
+description: "Container test: developer packages and dotfiles"
+
+params:
+  user: dev
+  home: /home/dev
+  editor: vim
+
+machines:
+  devbox:
+    hostname: devbox
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-container-01-devbox
+      ephemeral: true
+      privileged: false
+      init: true
+
+resources:
+  dev-packages:
+    type: package
+    machine: devbox
+    provider: apt
+    packages:
+      - curl
+      - git
+      - tmux
+      - htop
+      - tree
+      - jq
+
+  dev-user:
+    type: user
+    machine: devbox
+    name: "{{params.user}}"
+    home: "{{params.home}}"
+    shell: /bin/bash
+    depends_on: [dev-packages]
+
+  home-dir:
+    type: file
+    machine: devbox
+    state: directory
+    path: "{{params.home}}"
+    owner: "{{params.user}}"
+    mode: '0755'
+    depends_on: [dev-user]
+
+  gitconfig:
+    type: file
+    machine: devbox
+    path: "{{params.home}}/.gitconfig"
+    content: |
+      [core]
+        editor = {{params.editor}}
+      [init]
+        defaultBranch = main
+    owner: "{{params.user}}"
+    mode: '0644'
+    depends_on: [home-dir]
+
+  bashrc:
+    type: file
+    machine: devbox
+    path: "{{params.home}}/.bashrc"
+    content: |
+      export EDITOR={{params.editor}}
+      export PATH="$HOME/.cargo/bin:$PATH"
+      alias ll='ls -alF'
+    owner: "{{params.user}}"
+    mode: '0644'
+    depends_on: [home-dir]
