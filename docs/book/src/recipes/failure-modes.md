@@ -13,7 +13,7 @@ can resume from where it left off on retry.
 **Resources**: succeeding-resource (file), failing-resource (file),
 dependent-resource (file)
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 2+3 | **Idempotency**: Strong | **Grade**: A
 
 ## #51 State Recovery
 
@@ -24,7 +24,7 @@ when the state file is damaged or deleted.
 **Resources**: baseline-resources (file), state-file (file),
 recovery-check (file)
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 2+3 | **Idempotency**: Strong | **Grade**: A
 
 ## #52 Crash Resilience
 

@@ -14,7 +14,7 @@ provider and builds a project in release mode.
 **Resources**: rust-toolchain (package/cargo), build-script (file),
 artifact-dir (file)
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 2+3 | **Idempotency**: Strong | **Grade**: A
 
 ## #17 Static MUSL Binary
 
@@ -25,7 +25,7 @@ maximum portability (no glibc dependency).
 **Resources**: musl-tools (package), musl-target (package/cargo),
 build-script (file)
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 2+3 | **Idempotency**: Strong | **Grade**: A
 
 ## #19 Cross-Compilation
 
@@ -36,7 +36,7 @@ configures cargo for cross-target builds.
 **Resources**: cross-toolchain (package), target-config (file),
 build-script (file)
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 2+3 | **Idempotency**: Strong | **Grade**: A
 
 ## #20 Sovereign Stack
 
@@ -47,7 +47,7 @@ a single deployable artifact set.
 **Resources**: source-checkout (file), build-deps (package),
 multi-binary-build (file), deploy-dir (file)
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 2+3 | **Idempotency**: Strong | **Grade**: A
 
 ## #21 APR Model Binary
 
@@ -58,4 +58,4 @@ and deploys it with configuration files.
 **Resources**: model-deps (package), build-script (file),
 model-config (file), deploy-binary (file)
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 2+3 | **Idempotency**: Strong | **Grade**: A

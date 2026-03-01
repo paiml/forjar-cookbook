@@ -13,7 +13,7 @@ proper script permissions.
 **Resources**: backup-dir (file), backup-script (file),
 backup-cron (cron), log-cleanup-script (file), log-cleanup-cron (cron)
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 2+3 | **Idempotency**: Strong | **Grade**: A
 
 ## #41 User Provisioning
 
@@ -24,7 +24,7 @@ permission hierarchies.
 **Resources**: users (user), groups (user), ssh-keys (file),
 quota-config (file)
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 2+3 | **Idempotency**: Strong | **Grade**: A
 
 ## #42 Kernel Tuning
 
@@ -46,7 +46,7 @@ rules.
 **Resources**: logrotate-config (file), rsyslog-config (file),
 log-dirs (file)
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 2+3 | **Idempotency**: Strong | **Grade**: A
 
 ## #44 Time Synchronization
 
@@ -57,7 +57,7 @@ NTP servers.
 **Resources**: chrony-pkg (package), chrony-config (file),
 chrony-service (service)
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 2+3 | **Idempotency**: Strong | **Grade**: A
 
 ## #45 Custom Systemd Units
 
@@ -79,7 +79,7 @@ resource constraints.
 **Resources**: limits-conf (file), systemd-slice (file),
 pam-config (file)
 
-**Tier**: 3 | **Idempotency**: Strong
+**Tier**: 3 | **Idempotency**: Strong | **Grade**: A
 
 ## #47 Automated Patching
 
@@ -90,7 +90,7 @@ notification hooks.
 **Resources**: unattended-upgrades (package), auto-upgrade-config (file),
 blacklist (file), reboot-policy (file)
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 2+3 | **Idempotency**: Strong | **Grade**: A
 
 ## #48 Hostname and Locale
 
@@ -101,7 +101,7 @@ other recipes depend on.
 **Resources**: hostname (file), hosts (file), locale-config (file),
 timezone (file), resolv-config (file)
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 2+3 | **Idempotency**: Strong | **Grade**: A
 
 ## #49 Swap Memory
 

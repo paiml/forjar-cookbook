@@ -13,7 +13,7 @@ signed repos and key pinning.
 **Resources**: repo-key (file), repo-source (file),
 apt-update (package)
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 2+3 | **Idempotency**: Strong | **Blocked**: FJ-1130
 
 ## #26 .deb Package Build
 
@@ -24,7 +24,7 @@ directory structure, control file, install scripts, and builds the
 **Resources**: build-deps (package), package-dir (file),
 control-file (file), build-script (file)
 
-**Tier**: 2 | **Idempotency**: Strong
+**Tier**: 2 | **Idempotency**: Strong | **Grade**: A
 
 ## #27 Private APT Repository
 
@@ -35,7 +35,7 @@ distribution configuration.
 **Resources**: reprepro-pkg (package), repo-dir (file),
 distributions-config (file), gpg-key (file)
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 2+3 | **Idempotency**: Strong | **Grade**: A
 
 ## #28 RPM Package
 
@@ -45,7 +45,7 @@ directory structure, and builds the RPM for Red Hat-family distributions.
 **Resources**: rpm-build-deps (package), spec-file (file),
 source-dir (file), build-script (file)
 
-**Tier**: 2 | **Idempotency**: Strong
+**Tier**: 2 | **Idempotency**: Strong | **Grade**: A
 
 ## #29 Distribution Pipeline
 
@@ -56,4 +56,4 @@ with repository management and fleet-wide deployment.
 **Resources**: build-stage (file), sign-stage (file),
 publish-stage (file), fleet-deploy (file)
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 2+3 | **Idempotency**: Strong | **Grade**: A

@@ -13,7 +13,7 @@ validates the package, file, and user resource types end-to-end.
 **Resources**: dev-packages (apt), dev-user (user), home-dir (file),
 gitconfig (file), vimrc (file), tmux-conf (file), shell-rc (file)
 
-**Tier**: 2+3 | **Idempotency**: Strong | **Budget**: <60s first, <2s second
+**Tier**: 2+3 | **Idempotency**: Strong | **Grade**: A
 
 ## #2 Web Application Server
 
@@ -24,7 +24,7 @@ integration and network/firewall resources.
 **Resources**: nginx-pkg (apt), site-config (file), tls-dir (file),
 nginx-service (service), firewall-http (network)
 
-**Tier**: 2+3 | **Idempotency**: Strong | **Budget**: <90s first, <3s second
+**Tier**: 2+3 | **Idempotency**: Strong | **Grade**: A
 
 ## #3 PostgreSQL Database
 
@@ -35,7 +35,7 @@ stateful application.
 **Resources**: pg-packages (apt), pg-config (file), pg-hba (file),
 pg-data-dir (file), pg-service (service)
 
-**Tier**: 2+3 | **Idempotency**: Strong | **Budget**: <120s first, <3s second
+**Tier**: 2+3 | **Idempotency**: Strong | **Grade**: A
 
 ## #4 Monitoring Stack
 
@@ -46,7 +46,7 @@ management.
 **Resources**: monitoring-packages (apt), prometheus-config (file),
 grafana-provisioning (file), prometheus-dir (file), grafana-dir (file)
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 2+3 | **Idempotency**: Strong | **Grade**: A
 
 ## #5 Redis Cache
 
@@ -57,7 +57,7 @@ and sysctl tuning for production workloads.
 **Resources**: redis-pkg (apt), redis-config (file), redis-data-dir (file),
 redis-service (service)
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 2+3 | **Idempotency**: Strong | **Grade**: A
 
 ## #6 CI Runner
 
@@ -68,7 +68,7 @@ management for continuous integration.
 **Resources**: ci-packages (apt), runner-user (user), workspace-dir (file),
 workspace-builds (file), workspace-cache (file), docker-service (service)
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 2+3 | **Idempotency**: Strong | **Grade**: A
 
 ## #7 ROCm GPU
 
@@ -77,7 +77,7 @@ GPU compute setup. Tests the GPU resource type with `gpu_backend: rocm`.
 
 **Resources**: rocm-packages (apt), gpu-check (gpu), rocm-env (file)
 
-**Tier**: 3 | **Idempotency**: Strong | **Requires**: AMD GPU hardware
+**Tier**: 3 | **Idempotency**: Strong | **Blocked**: FJ-1126
 
 ## #8 NVIDIA GPU
 
@@ -86,7 +86,7 @@ Tests the GPU resource type with `gpu_backend: nvidia`.
 
 **Resources**: nvidia-packages (apt), gpu-check (gpu), cuda-env (file)
 
-**Tier**: 3 | **Idempotency**: Strong | **Requires**: NVIDIA GPU hardware
+**Tier**: 3 | **Idempotency**: Strong | **Blocked**: FJ-1127
 
 ## #9 Secure Baseline
 
@@ -96,7 +96,7 @@ Establishes a security baseline that other recipes can build upon.
 **Resources**: security-pkgs (apt), sshd-config (file), fail2ban-config (file),
 firewall-ssh (network), sshd-service (service), fail2ban-service (service)
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 2+3 | **Idempotency**: Strong | **Grade**: A
 
 ## #10 NFS Server
 
@@ -106,7 +106,7 @@ Tests mount resource type and cross-machine file sharing patterns.
 **Resources**: nfs-packages (apt), exports-config (file), share-dir (file),
 nfs-service (service)
 
-**Tier**: 3 | **Idempotency**: Strong | **Requires**: Bare-metal or VM
+**Tier**: 3 | **Idempotency**: Strong | **Blocked**: FJ-1128
 
 ## #22 Secrets Lifecycle
 
@@ -117,7 +117,7 @@ Tests the full secrets workflow from creation through rotation.
 **Resources**: age-key-dir (file), secrets-encrypted (file),
 rotation-script (file), audit-log (file)
 
-**Tier**: 1+2 | **Idempotency**: Strong
+**Tier**: 1+2 | **Idempotency**: Strong | **Blocked**: FJ-1129
 
 ## #23 TLS Certificates
 
@@ -128,7 +128,7 @@ Validates file ownership and mode enforcement for PKI artifacts.
 **Resources**: cert-dir (file), self-signed-cert (file),
 renewal-script (file), expiry-check (cron)
 
-**Tier**: 1+2 | **Idempotency**: Strong
+**Tier**: 1+2 | **Idempotency**: Strong | **Grade**: A
 
 ## #24 Fleet Provisioning
 
@@ -139,4 +139,4 @@ config. Tests multi-machine orchestration at fleet scale.
 **Resources**: base-packages (package), node-identity (file),
 monitoring-agent (file), ssh-keys (file)
 
-**Tier**: 1+2 | **Idempotency**: Strong
+**Tier**: 1+2 | **Idempotency**: Strong | **Grade**: A

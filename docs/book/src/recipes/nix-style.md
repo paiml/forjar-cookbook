@@ -14,7 +14,7 @@ isolation. The shell environment is reproducible and ephemeral.
 **Resources**: shell-env (pepita), toolchain-packages (package),
 env-config (file)
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 2+3 | **Idempotency**: Strong | **Grade**: A
 
 ## #12 Toolchain Pin
 
@@ -25,7 +25,7 @@ system's installed packages.
 **Resources**: toolchain-layer (pepita), version-pins (file),
 path-config (file)
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 2+3 | **Idempotency**: Strong | **Grade**: A
 
 ## #13 Build Sandbox
 
@@ -36,7 +36,7 @@ during builds, ensuring reproducibility.
 **Resources**: sandbox-env (pepita), build-script (file),
 network-policy (network)
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 2+3 | **Idempotency**: Strong | **Grade**: A
 
 ## #14 System Profile
 
@@ -47,7 +47,7 @@ overlay mechanism.
 **Resources**: profile-layer (pepita), system-packages (package),
 profile-config (file)
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 2+3 | **Idempotency**: Strong | **Grade**: A
 
 ## #15 Workspace
 
@@ -58,4 +58,4 @@ environments under a single forjar config.
 **Resources**: workspace-root (file), shared-deps (pepita),
 project-envs (pepita)
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 2+3 | **Idempotency**: Strong | **Grade**: A

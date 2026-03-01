@@ -13,7 +13,7 @@ saved plan rather than re-planning at apply time.
 
 **Resources**: plan-file (file), apply-from-plan (file)
 
-**Tier**: 1+2 | **Idempotency**: Strong
+**Tier**: 1+2 | **Idempotency**: Strong | **Grade**: A
 
 ## #31 JSON Plan Format
 
@@ -23,7 +23,7 @@ workflows and cost estimation.
 
 **Resources**: plan-json (file), plan-parser (file)
 
-**Tier**: 1+2 | **Idempotency**: Strong
+**Tier**: 1+2 | **Idempotency**: Strong | **Grade**: A
 
 ## #32 Check Blocks
 
@@ -33,7 +33,7 @@ fail the apply if assertions don't pass.
 
 **Resources**: app-deploy (file), health-check (check)
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 2+3 | **Idempotency**: Strong | **Grade**: A
 
 ## #33 Lifecycle Protection
 
@@ -42,7 +42,7 @@ rules (prevent_destroy, create_before_destroy, ignore_changes).
 
 **Resources**: protected-db (file), lifecycle-rules (file)
 
-**Tier**: 1+2 | **Idempotency**: Strong
+**Tier**: 1+2 | **Idempotency**: Strong | **Grade**: A
 
 ## #34 Moved Blocks
 
@@ -52,7 +52,7 @@ config but should keep its existing state.
 
 **Resources**: original-resource (file), moved-declaration (file)
 
-**Tier**: 1+2 | **Idempotency**: Strong
+**Tier**: 1+2 | **Idempotency**: Strong | **Grade**: A
 
 ## #35 Refresh-Only Mode
 
@@ -62,7 +62,7 @@ reality.
 
 **Resources**: baseline-resources (file), state-sync (file)
 
-**Tier**: 1+2 | **Idempotency**: Strong
+**Tier**: 1+2 | **Idempotency**: Strong | **Grade**: A
 
 ## #36 Resource Targeting
 
@@ -71,7 +71,7 @@ configuration. Useful for emergency patches and targeted updates.
 
 **Resources**: targeted-resource (file), skip-resources (file)
 
-**Tier**: 1+2 | **Idempotency**: Strong
+**Tier**: 1+2 | **Idempotency**: Strong | **Grade**: A
 
 ## #37 Testing DSL
 
@@ -80,7 +80,7 @@ inline in the recipe config and verify them during plan or apply.
 
 **Resources**: test-assertions (file), expected-state (file)
 
-**Tier**: 1+2 | **Idempotency**: Strong
+**Tier**: 1+2 | **Idempotency**: Strong | **Grade**: A
 
 ## #38 State Encryption
 
@@ -89,7 +89,7 @@ sensitive infrastructure state data from unauthorized access.
 
 **Resources**: encrypted-state (file), key-config (file)
 
-**Tier**: 1+2 | **Idempotency**: Strong
+**Tier**: 1+2 | **Idempotency**: Strong | **Grade**: A
 
 ## #39 Cross-Config Data Source
 
@@ -99,4 +99,4 @@ components through data sources.
 
 **Resources**: upstream-output (file), downstream-input (file)
 
-**Tier**: 1+2 | **Idempotency**: Strong
+**Tier**: 1+2 | **Idempotency**: Strong | **Grade**: A
