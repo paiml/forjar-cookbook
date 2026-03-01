@@ -4,6 +4,7 @@
 
 mod tests_dimensions;
 mod tests_dimensions_ext;
+mod tests_saf_obs;
 
 use super::*;
 use crate::qualify::{IdempotencyClass, RecipeStatus};

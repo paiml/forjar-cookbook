@@ -2,7 +2,7 @@
 
 use crate::qualify::{IdempotencyClass, RecipeStatus};
 use crate::score::dimensions::{
-    score_cmp, score_cor, score_doc, score_idm, score_obs, score_prf, score_res, score_saf,
+    score_cmp, score_cor, score_doc, score_idm, score_prf, score_res, score_saf,
 };
 use crate::score::{RecipeConfig, RuntimeData, SAFETY_CRITICAL_CAP, ScoringInput};
 
@@ -462,74 +462,4 @@ fn cmp_empty_config_is_zero() {
         runtime: None,
     };
     assert_eq!(score_cmp(&input), 0);
-}
-
-// ── OBS scoring ──────────────────────────────────────────────────
-
-#[test]
-fn obs_with_notify_hooks() {
-    let yaml = "\
-version: '1.0'
-name: test-recipe
-resources:
-  f:
-    type: file
-    dest: /tmp/x
-    mode: '0644'
-    owner: root
-policy:
-  tripwire: true
-  lock_file: true
-  notify:
-    on_success: echo ok
-    on_failure: echo fail
-    on_drift: echo drift
-outputs:
-  test:
-    value: ok
-";
-    let config = RecipeConfig::from_yaml(yaml).unwrap_or_else(|_| minimal_config());
-    let input = ScoringInput {
-        status: &RecipeStatus::Qualified,
-        idempotency_class: &IdempotencyClass::Strong,
-        config: &config,
-        raw_yaml: yaml,
-        budget_ms: 0,
-        runtime: None,
-    };
-    let score = score_obs(&input);
-    // tripwire: +15, lock_file: +15, outputs: +10, mode 100%: +15, owner 100%: +15, notify 3/3: +20 = 90
-    assert_eq!(score, 90);
-}
-
-#[test]
-fn obs_without_notify_hooks() {
-    let yaml = "\
-version: '1.0'
-name: test-recipe
-resources:
-  f:
-    type: file
-    dest: /tmp/x
-    mode: '0644'
-    owner: root
-policy:
-  tripwire: true
-  lock_file: true
-outputs:
-  test:
-    value: ok
-";
-    let config = RecipeConfig::from_yaml(yaml).unwrap_or_else(|_| minimal_config());
-    let input = ScoringInput {
-        status: &RecipeStatus::Qualified,
-        idempotency_class: &IdempotencyClass::Strong,
-        config: &config,
-        raw_yaml: yaml,
-        budget_ms: 0,
-        runtime: None,
-    };
-    let score = score_obs(&input);
-    // tripwire: +15, lock_file: +15, outputs: +10, mode 100%: +15, owner 100%: +15 = 70
-    assert_eq!(score, 70);
 }

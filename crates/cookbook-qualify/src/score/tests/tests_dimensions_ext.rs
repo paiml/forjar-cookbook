@@ -1,9 +1,7 @@
 //! Extended per-dimension scoring tests — additional PRF, IDM, OBS, DOC, RES, CMP, SAF.
 
 use crate::qualify::{IdempotencyClass, RecipeStatus};
-use crate::score::dimensions::{
-    score_cmp, score_doc, score_idm, score_obs, score_prf, score_res, score_saf,
-};
+use crate::score::dimensions::{score_cmp, score_doc, score_idm, score_obs, score_prf, score_res};
 use crate::score::{RecipeConfig, RuntimeData, ScoringInput};
 
 fn minimal_config() -> RecipeConfig {
@@ -423,62 +421,4 @@ resources: {}
     let score = score_cmp(&input);
     // includes: +10, recipe nesting (>1): +15 = 25
     assert_eq!(score, 25);
-}
-
-// ── SAF additional ──────────────────────────────────────────────
-
-#[test]
-fn saf_package_without_version_pin() {
-    let yaml = "\
-version: '1.0'
-name: test-recipe
-resources:
-  pkg:
-    type: package
-    name: nginx
-";
-    let config = RecipeConfig::from_yaml(yaml).unwrap_or_else(|_| minimal_config());
-    let mut penalties = Vec::new();
-    let input = ScoringInput {
-        status: &RecipeStatus::Qualified,
-        idempotency_class: &IdempotencyClass::Strong,
-        config: &config,
-        raw_yaml: yaml,
-        budget_ms: 0,
-        runtime: None,
-    };
-    let score = score_saf(&input, &mut penalties);
-    // 100 - 3 (no version pin) = 97
-    assert_eq!(score, 97);
-    assert_eq!(penalties.len(), 1);
-    assert!(penalties[0].reason.contains("version pin"));
-}
-
-#[test]
-fn saf_multiple_files_all_penalized() {
-    let yaml = "\
-version: '1.0'
-name: test-recipe
-resources:
-  a:
-    type: file
-    dest: /tmp/a
-  b:
-    type: file
-    dest: /tmp/b
-";
-    let config = RecipeConfig::from_yaml(yaml).unwrap_or_else(|_| minimal_config());
-    let mut penalties = Vec::new();
-    let input = ScoringInput {
-        status: &RecipeStatus::Qualified,
-        idempotency_class: &IdempotencyClass::Strong,
-        config: &config,
-        raw_yaml: yaml,
-        budget_ms: 0,
-        runtime: None,
-    };
-    let score = score_saf(&input, &mut penalties);
-    // 100 - 5×2 (no mode) - 3×2 (no owner) = 84
-    assert_eq!(score, 84);
-    assert_eq!(penalties.len(), 4);
 }
