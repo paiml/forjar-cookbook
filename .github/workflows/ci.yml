@@ -32,6 +32,15 @@ jobs:
       - run: cargo llvm-cov --workspace --lib --lcov --output-path lcov.info
       - run: ./scripts/coverage-check.sh
 
+  score:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Score all recipes (static analysis)
+        run: cargo run --example score_all
+
   docs:
     runs-on: ubuntu-latest
     steps:
