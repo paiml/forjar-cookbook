@@ -140,7 +140,7 @@ resources:
     mode: '0644'
     content: |
       {
-        "workspace": "sovereign-ai",
+        "workspace": "{{params.workspace_name}}",
         "base_packages": ["build-essential", "curl", "git", "pkg-config"],
         "projects": [
           {"name": "forjar", "deps": ["libssl-dev"]},
@@ -159,7 +159,7 @@ policy:
   tripwire: true
   lock_file: true
   ssh_retries: 3
-  pre_apply: "echo 'Creating workspace: sovereign-ai'"
+  pre_apply: "echo 'Creating workspace: {{params.workspace_name}}'"
   post_apply: "echo 'Workspace ready'"
   notify:
     on_success: "echo 'All workspace projects provisioned'"
@@ -168,7 +168,7 @@ policy:
 
 outputs:
   workspace_name:
-    value: "sovereign-ai"
+    value: "{{params.workspace_name}}"
     description: "Workspace name"
   projects:
     value: "forjar,pmat"

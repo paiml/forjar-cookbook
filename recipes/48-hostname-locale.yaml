@@ -89,6 +89,7 @@ resources:
     path: /etc/systemd/resolved.conf.d/forjar.conf
     owner: root
     mode: '0644'
+    depends_on: [resolved-conf-dir]
     content: |
       [Resolve]
       DNS=1.1.1.1 8.8.8.8

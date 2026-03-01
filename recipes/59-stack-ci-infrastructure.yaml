@@ -60,8 +60,8 @@ resources:
   runner-user:
     type: user
     machine: target
-    name: runner
-    home: /home/runner
+    name: "{{params.runner_user}}"
+    home: "/home/{{params.runner_user}}"
     shell: /bin/bash
     groups: [sudo]
     depends_on: [ci-packages]
@@ -72,7 +72,7 @@ resources:
     type: file
     machine: target
     state: directory
-    path: /home/runner/workspace
+    path: "/home/{{params.runner_user}}/workspace"
     owner: root
     mode: '0755'
     depends_on: [runner-user]
@@ -82,7 +82,7 @@ resources:
   runner-config:
     type: file
     machine: target
-    path: /home/runner/.runner-config.yaml
+    path: "/home/{{params.runner_user}}/.runner-config.yaml"
     owner: root
     mode: '0644'
     content: |
@@ -90,7 +90,7 @@ resources:
       runner:
         name: forjar-ci-runner
         labels: [self-hosted, linux, x86_64]
-        work_dir: /home/runner/workspace
+        work_dir: /home/{{params.runner_user}}/workspace
     depends_on: [runner-workspace]
     tags: [stack, ci-runner]
     resource_group: ci-runner

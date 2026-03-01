@@ -51,7 +51,7 @@ resources:
       # Managed by forjar — refresh-only test
       # This config may be hotfixed manually.
       # refresh-only accepts the hotfix into state.
-      app: hotfix-app
+      app: {{params.app_name}}
       version: 1.0
       debug: false
     depends_on: [app-dir]

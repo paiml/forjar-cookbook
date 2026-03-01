@@ -55,7 +55,7 @@ resources:
     type: file
     machine: builder
     state: directory
-    path: /tmp/build-output
+    path: "{{params.output_dir}}"
     owner: root
     mode: '0755'
     tags: [sandbox, output]
@@ -70,13 +70,13 @@ resources:
     content: |
       #!/bin/bash
       set -euo pipefail
-      echo "=== Sandbox Build: forjar-build ==="
+      echo "=== Sandbox Build: {{params.build_name}} ==="
       echo "Build environment isolated in overlay"
       echo "Network: isolated (no undeclared deps)"
-      echo "Memory: 8192 MB"
+      echo "Memory: {{params.memory_mb}} MB"
       echo ""
       echo "Build would run here..."
-      echo "Artifacts extracted to /tmp/build-output"
+      echo "Artifacts extracted to {{params.output_dir}}"
       echo "Overlay destroyed after completion"
     depends_on: [build-deps, output-dir]
     tags: [sandbox, build]
@@ -85,17 +85,17 @@ resources:
   build-manifest:
     type: file
     machine: builder
-    path: /tmp/build-output/build-manifest.json
+    path: "{{params.output_dir}}/build-manifest.json"
     owner: root
     mode: '0644'
     content: |
       {
-        "build_name": "forjar-build",
+        "build_name": "{{params.build_name}}",
         "sandbox": true,
         "ephemeral": true,
         "network": "isolated",
-        "memory_mb": 8192,
-        "output_dir": "/tmp/build-output"
+        "memory_mb": {{params.memory_mb}},
+        "output_dir": "{{params.output_dir}}"
       }
     depends_on: [build-script]
     tags: [sandbox, manifest]
@@ -116,7 +116,7 @@ policy:
 
 outputs:
   output_dir:
-    value: "/tmp/build-output"
+    value: "{{params.output_dir}}"
     description: "Build artifact output directory"
   ephemeral:
     value: "true"

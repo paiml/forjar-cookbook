@@ -71,8 +71,8 @@ resources:
     owner: root
     mode: '0644'
     content: |
-      Package: forjar
-      Version: 1.0.0
+      Package: {{params.pkg_name}}
+      Version: {{params.pkg_version}}
       Architecture: amd64
       Maintainer: ops@example.com
       Description: Declarative infrastructure convergence (pipeline build)
@@ -94,7 +94,7 @@ resources:
     type: file
     machine: pipeline-host
     state: directory
-    path: /var/lib/apt-repo/internal/pool/main
+    path: "{{params.repo_dir}}/pool/main"
     owner: root
     mode: '0755'
     tags: [pipeline, repo]
@@ -110,28 +110,28 @@ resources:
       #!/bin/bash
       set -euo pipefail
       echo "=== Stage 1: Prepare binary ==="
-      BIN="/tmp/pipeline/staging/usr/local/bin/forjar"
-      if [ -x /usr/local/bin/forjar ]; then
-        cp /usr/local/bin/forjar "$BIN"
+      BIN="/tmp/pipeline/staging/usr/local/bin/{{params.pkg_name}}"
+      if [ -x /usr/local/bin/{{params.pkg_name}} ]; then
+        cp /usr/local/bin/{{params.pkg_name}} "$BIN"
       else
         echo '#!/bin/bash' > "$BIN"
-        echo 'echo "forjar 1.0.0 (pipeline placeholder)"' >> "$BIN"
+        echo 'echo "{{params.pkg_name}} {{params.pkg_version}} (pipeline placeholder)"' >> "$BIN"
         chmod 755 "$BIN"
       fi
 
       echo "=== Stage 2: Build .deb ==="
-      DEB="/tmp/pipeline/output/forjar_1.0.0_amd64.deb"
+      DEB="/tmp/pipeline/output/{{params.pkg_name}}_{{params.pkg_version}}_amd64.deb"
       dpkg-deb --build /tmp/pipeline/staging "$DEB" 2>/dev/null && \
         echo "Built: $DEB" || echo "dpkg-deb skipped"
 
       echo "=== Stage 3: Stage to repo ==="
       if [ -f "$DEB" ]; then
-        cp "$DEB" /var/lib/apt-repo/internal/pool/main/ 2>/dev/null || true
+        cp "$DEB" {{params.repo_dir}}/pool/main/ 2>/dev/null || true
         echo "Staged to repo pool"
       fi
 
       echo "=== Stage 4: Update repo index ==="
-      cd /var/lib/apt-repo/internal 2>/dev/null && \
+      cd {{params.repo_dir}} 2>/dev/null && \
         dpkg-scanpackages pool/ 2>/dev/null > Packages || true
 
       echo "=== Pipeline complete ==="
@@ -147,11 +147,11 @@ resources:
     mode: '0755'
     content: |
       #!/bin/bash
-      DEB="/tmp/pipeline/output/forjar_1.0.0_amd64.deb"
+      DEB="/tmp/pipeline/output/{{params.pkg_name}}_{{params.pkg_version}}_amd64.deb"
       echo "=== Verification ==="
       [ -f "$DEB" ] && echo "OK: .deb exists" || echo "WARN: no .deb"
       [ -f "$DEB" ] && dpkg-deb --info "$DEB" 2>/dev/null || true
-      ls -la /var/lib/apt-repo/internal/pool/main/*.deb 2>/dev/null || echo "No .debs in repo pool"
+      ls -la {{params.repo_dir}}/pool/main/*.deb 2>/dev/null || echo "No .debs in repo pool"
     depends_on: [pipeline-script]
     tags: [pipeline, verify]
     resource_group: pipeline
@@ -171,8 +171,8 @@ policy:
 
 outputs:
   deb_path:
-    value: "/tmp/pipeline/output/forjar_1.0.0_amd64.deb"
+    value: "/tmp/pipeline/output/{{params.pkg_name}}_{{params.pkg_version}}_amd64.deb"
     description: "Built .deb package path"
   repo_pool:
-    value: "/var/lib/apt-repo/internal/pool/main"
+    value: "{{params.repo_dir}}/pool/main"
     description: "Repository pool directory"

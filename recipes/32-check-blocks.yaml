@@ -71,8 +71,8 @@ resources:
     mode: '0644'
     content: |
       # Managed by forjar — check blocks test
-      port: 8080
-      health_path: /health
+      port: {{params.app_port}}
+      health_path: {{params.health_path}}
       checks_mode: warn
     depends_on: [check-deps]
     tags: [checks, config]

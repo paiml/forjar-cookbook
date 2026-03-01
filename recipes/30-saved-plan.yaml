@@ -35,7 +35,7 @@ resources:
     type: file
     machine: target
     state: directory
-    path: /tmp/forjar-plans
+    path: "{{params.plan_dir}}"
     owner: root
     mode: '0755'
     tags: [plan, dirs]
@@ -50,7 +50,7 @@ resources:
     mode: '0644'
     content: |
       # Managed by forjar — saved plan test
-      app: web-stack
+      app: {{params.app_name}}
       version: 1.0
       port: 8080
     depends_on: [plan-dir]
@@ -89,7 +89,7 @@ resources:
   plan-manifest:
     type: file
     machine: target
-    path: /tmp/forjar-plans/plan-manifest.json
+    path: "{{params.plan_dir}}/plan-manifest.json"
     owner: root
     mode: '0644'
     content: |
@@ -119,7 +119,7 @@ policy:
 
 outputs:
   plan_dir:
-    value: "/tmp/forjar-plans"
+    value: "{{params.plan_dir}}"
     description: "Plan file storage directory"
   toctou_safe:
     value: "true"

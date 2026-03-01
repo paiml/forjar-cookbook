@@ -49,8 +49,8 @@ resources:
     mode: '0644'
     content: |
       [Journal]
-      SystemMaxUse=500M
-      MaxRetentionSec=30d
+      SystemMaxUse={{params.journal_max_disk}}
+      MaxRetentionSec={{params.journal_max_age}}
       MaxFileSec=1day
       Compress=yes
       ForwardToSyslog=no
@@ -75,8 +75,8 @@ resources:
     mode: '0644'
     content: |
       /var/log/forjar/*.log {
-          daily
-          rotate 7
+          {{params.rotate_schedule}}
+          rotate {{params.rotate_count}}
           compress
           delaycompress
           missingok
@@ -136,8 +136,8 @@ policy:
 
 outputs:
   journal_max_disk:
-    value: "500M"
+    value: "{{params.journal_max_disk}}"
     description: "Maximum journald disk usage"
   rotate_schedule:
-    value: "daily"
+    value: "{{params.rotate_schedule}}"
     description: "Logrotate schedule"

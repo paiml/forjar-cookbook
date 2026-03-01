@@ -74,6 +74,7 @@ resources:
           {"from": "webserver-pkg", "to": "nginx-web"},
           {"from": "db-pkg", "to": "postgres-primary"}
         ],
+        "app": "{{params.app_name}}",
         "note": "moved blocks are one-time migrations, removable after first apply"
       }
     depends_on: [postgres-primary]

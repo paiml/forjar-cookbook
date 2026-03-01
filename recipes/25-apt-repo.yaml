@@ -43,15 +43,15 @@ resources:
   gpg-key-script:
     type: file
     machine: repo-host
-    path: /usr/local/bin/forjar-apt-key-docker.sh
+    path: /usr/local/bin/forjar-apt-key-{{params.repo_name}}.sh
     owner: root
     mode: '0755'
     content: |
       #!/bin/bash
       set -euo pipefail
-      KEYRING="/etc/apt/keyrings/docker.gpg"
+      KEYRING="/etc/apt/keyrings/{{params.repo_name}}.gpg"
       [ -f "$KEYRING" ] && exit 0
-      curl -fsSL 'https://download.docker.com/linux/ubuntu/gpg' | \
+      curl -fsSL 'https://download.{{params.repo_name}}.com/linux/ubuntu/gpg' | \
         gpg --dearmor -o "$KEYRING" 2>/dev/null
       chmod 644 "$KEYRING"
     depends_on: [keyring-dir]
@@ -61,11 +61,11 @@ resources:
   sources-list:
     type: file
     machine: repo-host
-    path: /etc/apt/sources.list.d/docker.list
+    path: /etc/apt/sources.list.d/{{params.repo_name}}.list
     owner: root
     mode: '0644'
     content: |
-      deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu jammy stable
+      deb [arch={{params.arch}} signed-by=/etc/apt/keyrings/{{params.repo_name}}.gpg] https://download.{{params.repo_name}}.com/linux/ubuntu jammy stable
     depends_on: [gpg-key-script]
     tags: [apt-repo, sources]
     resource_group: apt-repo
@@ -73,13 +73,13 @@ resources:
   apt-pin:
     type: file
     machine: repo-host
-    path: /etc/apt/preferences.d/docker
+    path: /etc/apt/preferences.d/{{params.repo_name}}
     owner: root
     mode: '0644'
     content: |
       # Managed by forjar — Docker CE APT pinning
       Package: docker-ce docker-ce-cli containerd.io
-      Pin: origin download.docker.com
+      Pin: origin download.{{params.repo_name}}.com
       Pin-Priority: 500
     depends_on: [sources-list]
     tags: [apt-repo, pin]
@@ -94,9 +94,9 @@ resources:
     content: |
       #!/bin/bash
       echo "Verifying APT repository configuration..."
-      [ -f /etc/apt/keyrings/docker.gpg ] && echo "OK: GPG keyring exists" || echo "FAIL: no keyring"
-      [ -f /etc/apt/sources.list.d/docker.list ] && echo "OK: sources list exists" || echo "FAIL: no sources"
-      apt-get update -o Dir::Etc::sourcelist=/etc/apt/sources.list.d/docker.list \
+      [ -f /etc/apt/keyrings/{{params.repo_name}}.gpg ] && echo "OK: GPG keyring exists" || echo "FAIL: no keyring"
+      [ -f /etc/apt/sources.list.d/{{params.repo_name}}.list ] && echo "OK: sources list exists" || echo "FAIL: no sources"
+      apt-get update -o Dir::Etc::sourcelist=/etc/apt/sources.list.d/{{params.repo_name}}.list \
         -o Dir::Etc::sourceparts=/dev/null 2>/dev/null && \
         echo "OK: repo reachable" || echo "WARN: repo not reachable (expected in container)"
     depends_on: [sources-list]
@@ -118,8 +118,8 @@ policy:
 
 outputs:
   repo_name:
-    value: "docker"
+    value: "{{params.repo_name}}"
     description: "Configured repository name"
   sources_file:
-    value: "/etc/apt/sources.list.d/docker.list"
+    value: "/etc/apt/sources.list.d/{{params.repo_name}}.list"
     description: "APT sources list file path"

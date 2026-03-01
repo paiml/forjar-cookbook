@@ -55,7 +55,7 @@ resources:
   build-forjar-script:
     type: file
     machine: build-host
-    path: /usr/local/bin/sovereign-build-forjar.sh
+    path: "{{params.install_dir}}/sovereign-build-forjar.sh"
     owner: root
     mode: '0755'
     content: |
@@ -64,7 +64,7 @@ resources:
       export PATH="$HOME/.cargo/bin:$PATH"
       echo "Building forjar..."
       cargo install --root /tmp/sovereign-build --force forjar 2>/dev/null && \
-        cp /tmp/sovereign-build/bin/forjar /usr/local/bin/forjar || \
+        cp /tmp/sovereign-build/bin/forjar {{params.install_dir}}/forjar || \
         echo "forjar build skipped"
     depends_on: [build-deps]
     tags: [sovereign, forjar]
@@ -73,7 +73,7 @@ resources:
   build-pmat-script:
     type: file
     machine: build-host
-    path: /usr/local/bin/sovereign-build-pmat.sh
+    path: "{{params.install_dir}}/sovereign-build-pmat.sh"
     owner: root
     mode: '0755'
     content: |
@@ -82,7 +82,7 @@ resources:
       export PATH="$HOME/.cargo/bin:$PATH"
       echo "Building pmat..."
       cargo install --root /tmp/sovereign-build --force pmat 2>/dev/null && \
-        cp /tmp/sovereign-build/bin/pmat /usr/local/bin/pmat || \
+        cp /tmp/sovereign-build/bin/pmat {{params.install_dir}}/pmat || \
         echo "pmat build skipped"
     depends_on: [build-deps]
     tags: [sovereign, pmat]
@@ -91,7 +91,7 @@ resources:
   build-batuta-script:
     type: file
     machine: build-host
-    path: /usr/local/bin/sovereign-build-batuta.sh
+    path: "{{params.install_dir}}/sovereign-build-batuta.sh"
     owner: root
     mode: '0755'
     content: |
@@ -100,7 +100,7 @@ resources:
       export PATH="$HOME/.cargo/bin:$PATH"
       echo "Building batuta..."
       cargo install --root /tmp/sovereign-build --force batuta 2>/dev/null && \
-        cp /tmp/sovereign-build/bin/batuta /usr/local/bin/batuta || \
+        cp /tmp/sovereign-build/bin/batuta {{params.install_dir}}/batuta || \
         echo "batuta build skipped"
     depends_on: [build-deps]
     tags: [sovereign, batuta]
@@ -109,7 +109,7 @@ resources:
   verify-all-script:
     type: file
     machine: build-host
-    path: /usr/local/bin/sovereign-verify-all.sh
+    path: "{{params.install_dir}}/sovereign-verify-all.sh"
     owner: root
     mode: '0755'
     content: |
@@ -136,7 +136,7 @@ resources:
       {
         "stack": "sovereign-ai",
         "components": ["forjar", "pmat", "batuta", "pzsh"],
-        "install_dir": "/usr/local/bin",
+        "install_dir": "{{params.install_dir}}",
         "build_host": "build-host",
         "build_time": "managed-by-forjar"
       }
@@ -159,7 +159,7 @@ policy:
 
 outputs:
   install_dir:
-    value: "/usr/local/bin"
+    value: "{{params.install_dir}}"
     description: "Binary installation directory"
   components:
     value: "forjar,pmat,batuta,pzsh"

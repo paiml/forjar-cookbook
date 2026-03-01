@@ -61,7 +61,7 @@ resources:
     mode: '0644'
     content: |
       # Managed by forjar — resource targeting test
-      # --target app-config includes: base-packages → app-dir → app-config
+      # --target {{params.target_resource}} includes: base-packages → app-dir → app-config
       # Does NOT include: app-service (downstream dependent)
       app: targeting-test
       port: 8080
@@ -117,7 +117,7 @@ policy:
 
 outputs:
   target_resource:
-    value: "app-config"
+    value: "{{params.target_resource}}"
     description: "Resource targeted for selective apply"
   transitive_deps:
     value: "base-packages,app-dir"

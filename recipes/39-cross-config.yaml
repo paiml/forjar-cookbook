@@ -36,7 +36,7 @@ data:
     type: forjar-state
     state_dir: ./state
     config: network-stack
-    default: "10.0.1.0/24"
+    default: "{{params.network_cidr}}"
     outputs:
       - subnet_cidr
       - gateway_ip
@@ -51,8 +51,8 @@ resources:
     mode: '0644'
     content: |
       # Simulated outputs from network-stack config
-      subnet_cidr: "10.0.1.0/24"
-      gateway_ip: "10.0.1.1"
+      subnet_cidr: "{{params.network_cidr}}"
+      gateway_ip: "{{params.gateway_ip}}"
     tags: [cross-config, network]
     resource_group: network
 
@@ -66,8 +66,8 @@ resources:
     content: |
       # Managed by forjar — cross-config outputs
       # Values imported from network-stack via data.type: forjar-state
-      SUBNET=10.0.1.0/24
-      GATEWAY=10.0.1.1
+      SUBNET={{params.network_cidr}}
+      GATEWAY={{params.gateway_ip}}
     depends_on: [network-outputs]
     tags: [cross-config, app]
     resource_group: app
@@ -81,8 +81,8 @@ resources:
     mode: '0644'
     content: |
       # Managed by forjar — cross-config outputs
-      listen_addresses='10.0.1.0/24'
-      gateway=10.0.1.1
+      listen_addresses='{{params.network_cidr}}'
+      gateway={{params.gateway_ip}}
     depends_on: [network-outputs]
     tags: [cross-config, database]
     resource_group: database
@@ -119,8 +119,8 @@ policy:
 
 outputs:
   subnet_cidr:
-    value: "10.0.1.0/24"
+    value: "{{params.network_cidr}}"
     description: "Network subnet CIDR (from network-stack)"
   gateway_ip:
-    value: "10.0.1.1"
+    value: "{{params.gateway_ip}}"
     description: "Gateway IP (from network-stack)"

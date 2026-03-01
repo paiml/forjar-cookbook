@@ -72,8 +72,8 @@ resources:
     owner: root
     mode: '0644'
     content: |
-      Package: forjar
-      Version: 1.0.0
+      Package: {{params.package_name}}
+      Version: {{params.package_version}}
       Architecture: amd64
       Maintainer: Forjar Team <team@forjar.dev>
       Description: Infrastructure convergence tool
@@ -96,19 +96,19 @@ resources:
   rpm-spec:
     type: file
     machine: target
-    path: /tmp/cross-distro/rpm/forjar.spec
+    path: "/tmp/cross-distro/rpm/{{params.package_name}}.spec"
     owner: root
     mode: '0644'
     content: |
-      Name: forjar
-      Version: 1.0.0
+      Name: {{params.package_name}}
+      Version: {{params.package_version}}
       Release: 1
       Summary: Infrastructure convergence tool
       License: MIT
       %description
       Forjar convergence tool — cross-distro release
       %files
-      /usr/local/bin/forjar
+      /usr/local/bin/{{params.package_name}}
     depends_on: [rpm-staging]
     tags: [stack, rpm]
     resource_group: rpm
@@ -122,8 +122,8 @@ resources:
     mode: '0644'
     content: |
       # Managed by forjar — cross-distro release
-      package: forjar
-      version: 1.0.0
+      package: {{params.package_name}}
+      version: {{params.package_version}}
       formats:
         - deb
         - rpm

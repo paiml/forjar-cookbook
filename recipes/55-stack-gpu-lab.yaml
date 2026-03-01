@@ -60,8 +60,8 @@ resources:
   lab-user:
     type: user
     machine: target
-    name: mleng
-    home: /home/mleng
+    name: "{{params.user}}"
+    home: "/home/{{params.user}}"
     shell: /bin/bash
     groups: [sudo]
     depends_on: [dev-packages]
@@ -88,7 +88,7 @@ resources:
     mode: '0644'
     content: |
       # Managed by forjar — GPU lab stack
-      backend=rocm
+      backend={{params.gpu_backend}}
       devices=all
       compute_mode=default
     depends_on: [gpu-config-dir]
@@ -128,7 +128,7 @@ resources:
           {"name": "gpu", "recipes": ["07-rocm-gpu"]},
           {"name": "monitoring", "recipes": ["04-monitoring-stack"]}
         ],
-        "gpu_backend": "rocm",
+        "gpu_backend": "{{params.gpu_backend}}",
         "conflict_free": true
       }
     depends_on: [lab-user, monitoring-config]

@@ -75,7 +75,7 @@ resources:
     path: /etc/timezone
     owner: root
     mode: '0644'
-    content: "UTC"
+    content: "{{params.timezone}}"
     tags: [time, timezone]
     resource_group: time-sync
 
@@ -87,8 +87,8 @@ resources:
     mode: '0755'
     content: |
       #!/bin/bash
-      timedatectl set-timezone UTC 2>/dev/null || \
-        ln -sf /usr/share/zoneinfo/UTC /etc/localtime
+      timedatectl set-timezone {{params.timezone}} 2>/dev/null || \
+        ln -sf /usr/share/zoneinfo/{{params.timezone}} /etc/localtime
     depends_on: [timezone-file]
     tags: [time, timezone]
     resource_group: time-sync
@@ -111,5 +111,5 @@ outputs:
     value: "chrony"
     description: "NTP service name"
   timezone:
-    value: "UTC"
+    value: "{{params.timezone}}"
     description: "Configured timezone"

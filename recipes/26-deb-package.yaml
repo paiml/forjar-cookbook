@@ -46,7 +46,7 @@ resources:
     type: file
     machine: deb-host
     state: directory
-    path: /tmp/deb-build/forjar/DEBIAN
+    path: /tmp/deb-build/{{params.pkg_name}}/DEBIAN
     owner: root
     mode: '0755'
     depends_on: [build-deps]
@@ -57,7 +57,7 @@ resources:
     type: file
     machine: deb-host
     state: directory
-    path: /tmp/deb-build/forjar/usr/local/bin
+    path: /tmp/deb-build/{{params.pkg_name}}/usr/local/bin
     owner: root
     mode: '0755'
     depends_on: [staging-dir]
@@ -67,15 +67,15 @@ resources:
   control-file:
     type: file
     machine: deb-host
-    path: /tmp/deb-build/forjar/DEBIAN/control
+    path: /tmp/deb-build/{{params.pkg_name}}/DEBIAN/control
     owner: root
     mode: '0644'
     content: |
-      Package: forjar
-      Version: 1.0.0
+      Package: {{params.pkg_name}}
+      Version: {{params.pkg_version}}
       Architecture: amd64
-      Maintainer: ops@example.com
-      Description: Declarative infrastructure convergence
+      Maintainer: {{params.pkg_maintainer}}
+      Description: {{params.pkg_description}}
        Forjar converges machine state to a declared YAML configuration.
     depends_on: [staging-dir]
     tags: [deb, control]
@@ -85,7 +85,7 @@ resources:
     type: file
     machine: deb-host
     state: directory
-    path: /tmp/deb-output
+    path: "{{params.output_dir}}"
     owner: root
     mode: '0755'
     tags: [deb, output]
@@ -100,18 +100,18 @@ resources:
     content: |
       #!/bin/bash
       set -euo pipefail
-      STAGING="/tmp/deb-build/forjar"
-      OUTPUT="/tmp/deb-output"
+      STAGING="/tmp/deb-build/{{params.pkg_name}}"
+      OUTPUT="{{params.output_dir}}"
       # Stage binary (use placeholder if not built yet)
-      if [ -x /usr/local/bin/forjar ]; then
-        cp /usr/local/bin/forjar "$STAGING/usr/local/bin/forjar"
+      if [ -x /usr/local/bin/{{params.pkg_name}} ]; then
+        cp /usr/local/bin/{{params.pkg_name}} "$STAGING/usr/local/bin/{{params.pkg_name}}"
       else
-        echo '#!/bin/bash' > "$STAGING/usr/local/bin/forjar"
-        echo 'echo "forjar 1.0.0 (placeholder)"' >> "$STAGING/usr/local/bin/forjar"
-        chmod 755 "$STAGING/usr/local/bin/forjar"
+        echo '#!/bin/bash' > "$STAGING/usr/local/bin/{{params.pkg_name}}"
+        echo 'echo "{{params.pkg_name}} {{params.pkg_version}} (placeholder)"' >> "$STAGING/usr/local/bin/{{params.pkg_name}}"
+        chmod 755 "$STAGING/usr/local/bin/{{params.pkg_name}}"
       fi
-      dpkg-deb --build "$STAGING" "$OUTPUT/forjar_1.0.0_amd64.deb" 2>/dev/null && \
-        echo "Built: $OUTPUT/forjar_1.0.0_amd64.deb" || \
+      dpkg-deb --build "$STAGING" "$OUTPUT/{{params.pkg_name}}_{{params.pkg_version}}_amd64.deb" 2>/dev/null && \
+        echo "Built: $OUTPUT/{{params.pkg_name}}_{{params.pkg_version}}_amd64.deb" || \
         echo "dpkg-deb build skipped"
     depends_on: [control-file, bin-dir, output-dir]
     tags: [deb, build]
@@ -125,7 +125,7 @@ resources:
     mode: '0755'
     content: |
       #!/bin/bash
-      DEB="/tmp/deb-output/forjar_1.0.0_amd64.deb"
+      DEB="{{params.output_dir}}/{{params.pkg_name}}_{{params.pkg_version}}_amd64.deb"
       if [ -f "$DEB" ]; then
         dpkg-deb --info "$DEB"
         dpkg-deb --contents "$DEB"
@@ -151,8 +151,8 @@ policy:
 
 outputs:
   package_path:
-    value: "/tmp/deb-output/forjar_1.0.0_amd64.deb"
+    value: "{{params.output_dir}}/{{params.pkg_name}}_{{params.pkg_version}}_amd64.deb"
     description: "Built .deb package path"
   package_name:
-    value: "forjar"
+    value: "{{params.pkg_name}}"
     description: "Package name"

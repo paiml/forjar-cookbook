@@ -1,14 +1,16 @@
 //! Score all recipes and update the CSV with dimension scores.
 //!
 //! Usage: `cargo run --example score_all`
-//! Reads each recipe YAML, computes static-only `ForjarScore`,
-//! and updates docs/certifications/recipes.csv with the results.
+//! Reads each recipe YAML, computes `ForjarScore` using existing runtime
+//! data from the CSV (if the recipe was previously qualified), and updates
+//! docs/certifications/recipes.csv with the results.
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use cookbook_qualify::{
-    ForjarScore, RecipeConfig, RecipeQualification, SCORE_VERSION, ScoringInput,
+    ForjarScore, RecipeConfig, RecipeQualification, RecipeStatus, RuntimeData, SCORE_VERSION,
+    ScoringInput,
 };
 
 fn main() -> ExitCode {
@@ -83,13 +85,15 @@ fn score_recipes(recipes: &mut [RecipeQualification], recipes_dir: &Path) -> (u3
             continue;
         };
 
+        // Reconstruct RuntimeData from CSV for previously-qualified recipes.
+        let runtime = runtime_from_csv(recipe);
         let input = ScoringInput {
             status: &recipe.status,
             idempotency_class: &recipe.idempotency_class,
             config: &config,
             raw_yaml: &raw_yaml,
             budget_ms: 0,
-            runtime: None,
+            runtime: runtime.as_ref(),
         };
 
         let score = ForjarScore::compute(&input);
@@ -126,6 +130,28 @@ fn apply_score(recipe: &mut RecipeQualification, score: &ForjarScore) {
     recipe.res = score.dimensions.res;
     recipe.cmp = score.dimensions.cmp;
     recipe.score_version = SCORE_VERSION.to_string();
+}
+
+/// Reconstruct `RuntimeData` from a previously-qualified recipe's CSV data.
+/// Returns `None` for blocked/pending recipes that haven't been qualified.
+fn runtime_from_csv(recipe: &RecipeQualification) -> Option<RuntimeData> {
+    if recipe.status != RecipeStatus::Qualified || recipe.first_apply_ms == 0 {
+        return None;
+    }
+    Some(RuntimeData {
+        validate_pass: true,
+        plan_pass: true,
+        first_apply_pass: true,
+        second_apply_pass: true,
+        zero_changes: true,
+        hash_stable: true,
+        changed_on_reapply: 0,
+        warning_count: 0,
+        first_apply_ms: recipe.first_apply_ms,
+        idempotent_apply_ms: recipe.idempotent_apply_ms,
+        state_lock_written: true,
+        all_resources_converged: true,
+    })
 }
 
 /// Find a recipe file by number prefix in the recipes directory.

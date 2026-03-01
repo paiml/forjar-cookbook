@@ -35,7 +35,7 @@ resources:
     type: file
     machine: target
     state: directory
-    path: /etc/forjar/keys
+    path: "{{params.key_dir}}"
     owner: root
     mode: '0700'
     tags: [encryption, keys]
@@ -45,7 +45,7 @@ resources:
     type: file
     machine: target
     state: directory
-    path: /var/lib/forjar/state
+    path: "{{params.state_dir}}"
     owner: root
     mode: '0700'
     tags: [encryption, state]
@@ -55,7 +55,7 @@ resources:
   key-metadata:
     type: file
     machine: target
-    path: /etc/forjar/keys/state-key.meta
+    path: "{{params.key_dir}}/state-key.meta"
     owner: root
     mode: '0600'
     content: |
@@ -78,7 +78,7 @@ resources:
     content: |
       # Managed by forjar — state encryption config
       encrypt_state=true
-      key_path=/etc/forjar/keys/state.key
+      key_path={{params.key_dir}}/state.key
       algorithm=age-x25519
       auto_decrypt=true
       auto_reencrypt=true
@@ -90,7 +90,7 @@ resources:
   sensitive-config:
     type: file
     machine: target
-    path: /var/lib/forjar/state/app-config.enc
+    path: "{{params.state_dir}}/app-config.enc"
     owner: root
     mode: '0600'
     content: |

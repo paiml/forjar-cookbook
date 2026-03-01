@@ -62,9 +62,9 @@ resources:
     mode: '0644'
     content: |
       # Managed by forjar — dev shell environment
-      # Shell: rust-dev
+      # Shell: {{params.shell_name}}
       export RUST_BACKTRACE=1
-      export DEVSHELL_NAME=rust-dev
+      export DEVSHELL_NAME={{params.shell_name}}
       export PATH="$HOME/.cargo/bin:$PATH"
     depends_on: [dev-packages]
     tags: [devshell, env]
@@ -78,9 +78,9 @@ resources:
     mode: '0644'
     content: |
       ====================================
-      forjar dev-shell: rust-dev
+      forjar dev-shell: {{params.shell_name}}
       Packages: build-essential curl git pkg-config libssl-dev
-      Memory limit: 4096 MB
+      Memory limit: {{params.memory_mb}} MB
       ====================================
     depends_on: [dev-packages]
     tags: [devshell, motd]
@@ -94,11 +94,11 @@ resources:
     mode: '0644'
     content: |
       # Managed by forjar — dev shell metadata
-      name=rust-dev
+      name={{params.shell_name}}
       transport=pepita
       filesystem=overlay
       ephemeral=false
-      memory_mb=4096
+      memory_mb={{params.memory_mb}}
     tags: [devshell, info]
     resource_group: dev-shell
 
@@ -108,7 +108,7 @@ policy:
   tripwire: true
   lock_file: true
   ssh_retries: 3
-  pre_apply: "echo 'Creating dev shell: rust-dev'"
+  pre_apply: "echo 'Creating dev shell: {{params.shell_name}}'"
   post_apply: "echo 'Dev shell ready'"
   notify:
     on_success: "echo 'Dev shell provisioned'"
@@ -117,7 +117,7 @@ policy:
 
 outputs:
   shell_name:
-    value: "rust-dev"
+    value: "{{params.shell_name}}"
     description: "Development shell name"
   transport:
     value: "pepita (container in CI)"

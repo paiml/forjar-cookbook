@@ -66,6 +66,7 @@ resources:
     owner: root
     mode: '0644'
     content: |
+      # Policy engine: {{params.policy_engine}}
       package forjar
       default allow = true
       deny[msg] {
@@ -101,7 +102,7 @@ policy:
   tripwire: true
   lock_file: true
   ssh_retries: 3
-  pre_apply: "echo 'Testing JSON plan output'"
+  pre_apply: "echo 'Testing {{params.output_format}} plan output with {{params.policy_engine}}'"
   post_apply: "echo 'JSON plan test complete'"
   notify:
     on_success: "echo 'JSON plan schema validated'"
@@ -110,8 +111,8 @@ policy:
 
 outputs:
   output_format:
-    value: "json"
+    value: "{{params.output_format}}"
     description: "Plan output format"
   policy_engine:
-    value: "opa"
+    value: "{{params.policy_engine}}"
     description: "Policy engine for plan validation"

@@ -36,7 +36,7 @@ resources:
     type: file
     machine: target
     state: directory
-    path: /var/lib/postgresql/15/main
+    path: "{{params.db_data_dir}}"
     owner: root
     mode: '0700'
     lifecycle:
@@ -47,7 +47,7 @@ resources:
   db-config:
     type: file
     machine: target
-    path: /var/lib/postgresql/15/main/pg_hba.conf
+    path: "{{params.db_data_dir}}/pg_hba.conf"
     owner: root
     mode: '0600'
     content: |
@@ -64,7 +64,7 @@ resources:
   app-config:
     type: file
     machine: target
-    path: /etc/app/config.yaml
+    path: "{{params.app_config_dir}}/config.yaml"
     owner: root
     mode: '0644'
     content: |
@@ -83,7 +83,7 @@ resources:
   external-config:
     type: file
     machine: target
-    path: /etc/app/external.conf
+    path: "{{params.app_config_dir}}/external.conf"
     owner: root
     mode: '0644'
     content: |

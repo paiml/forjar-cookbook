@@ -38,8 +38,8 @@ resources:
     type: file
     machine: model-host
     state: directory
-    path: /opt/apr/models
-    owner: root
+    path: "{{params.install_dir}}/models"
+    owner: "{{params.user}}"
     mode: '0755'
     tags: [apr, dirs]
     resource_group: apr-model
@@ -48,8 +48,8 @@ resources:
     type: file
     machine: model-host
     state: directory
-    path: /opt/apr/bin
-    owner: root
+    path: "{{params.install_dir}}/bin"
+    owner: "{{params.user}}"
     mode: '0755'
     tags: [apr, dirs]
     resource_group: apr-model
@@ -58,15 +58,15 @@ resources:
     type: file
     machine: model-host
     path: /usr/local/bin/apr-model-download.sh
-    owner: root
+    owner: "{{params.user}}"
     mode: '0755'
     content: |
       #!/bin/bash
       set -euo pipefail
-      MODEL_DIR="/opt/apr/models"
+      MODEL_DIR="{{params.install_dir}}/models"
       echo "Model download would fetch from HuggingFace..."
       echo "For CI: using placeholder model"
-      echo '{"model": "smollm2", "format": "gguf", "quantization": "q4_k_m"}' > \
+      echo '{"model": "{{params.model_name}}", "format": "gguf", "quantization": "q4_k_m"}' > \
         "$MODEL_DIR/model-info.json"
     depends_on: [apr-dirs]
     tags: [apr, download]
@@ -76,14 +76,14 @@ resources:
     type: file
     machine: model-host
     path: /usr/local/bin/apr-model-convert.sh
-    owner: root
+    owner: "{{params.user}}"
     mode: '0755'
     content: |
       #!/bin/bash
       set -euo pipefail
       echo "Model conversion: GGUF -> APR format"
       echo "apr convert --input source.gguf --output model.apr --quantization q4_k_m"
-      touch /opt/apr/models/model.apr
+      touch {{params.install_dir}}/models/model.apr
     depends_on: [model-download-script]
     tags: [apr, convert]
     resource_group: apr-model
@@ -92,18 +92,18 @@ resources:
     type: file
     machine: model-host
     path: /usr/local/bin/apr-model-compile.sh
-    owner: root
+    owner: "{{params.user}}"
     mode: '0755'
     content: |
       #!/bin/bash
       set -euo pipefail
       echo "Model compilation: APR -> self-contained binary"
-      echo "apr compile --model model.apr --output model-server --backend cpu"
-      cat > /opt/apr/bin/model-server <<'STUB'
+      echo "apr compile --model model.apr --output model-server --backend {{params.gpu_backend}}"
+      cat > {{params.install_dir}}/bin/model-server <<'STUB'
       #!/bin/bash
-      echo "APR model server (placeholder) listening on port ${1:-8080}"
+      echo "APR model server (placeholder) listening on port ${1:-{{params.serve_port}}}"
       STUB
-      chmod 755 /opt/apr/bin/model-server
+      chmod 755 {{params.install_dir}}/bin/model-server
     depends_on: [model-convert-script, apr-bin-dir]
     tags: [apr, compile]
     resource_group: apr-model
@@ -112,7 +112,7 @@ resources:
     type: file
     machine: model-host
     path: /etc/systemd/system/apr-model.service
-    owner: root
+    owner: "{{params.user}}"
     mode: '0644'
     content: |
       [Unit]
@@ -121,11 +121,11 @@ resources:
 
       [Service]
       Type=simple
-      User=root
-      ExecStart=/opt/apr/bin/model-server --port 8080
+      User={{params.user}}
+      ExecStart={{params.install_dir}}/bin/model-server --port {{params.serve_port}}
       Restart=on-failure
       RestartSec=10
-      Environment=APR_GPU_BACKEND=cpu
+      Environment=APR_GPU_BACKEND={{params.gpu_backend}}
 
       [Install]
       WantedBy=multi-user.target
@@ -137,11 +137,11 @@ resources:
     type: file
     machine: model-host
     path: /usr/local/bin/apr-health-check.sh
-    owner: root
+    owner: "{{params.user}}"
     mode: '0755'
     content: |
       #!/bin/bash
-      curl -sf http://localhost:8080/health 2>/dev/null && \
+      curl -sf http://localhost:{{params.serve_port}}/health 2>/dev/null && \
         echo "OK: model server healthy" || \
         echo "WARN: model server not responding"
     depends_on: [service-unit]
@@ -161,18 +161,18 @@ resources:
   build-manifest:
     type: file
     machine: model-host
-    path: /opt/apr/manifest.json
-    owner: root
+    path: "{{params.install_dir}}/manifest.json"
+    owner: "{{params.user}}"
     mode: '0644'
     content: |
       {
-        "model_name": "smollm2",
+        "model_name": "{{params.model_name}}",
         "model_format": "gguf",
         "quantization": "q4_k_m",
         "compile_target": "binary",
-        "gpu_backend": "cpu",
-        "binary_path": "/opt/apr/bin/model-server",
-        "serve_port": 8080
+        "gpu_backend": "{{params.gpu_backend}}",
+        "binary_path": "{{params.install_dir}}/bin/model-server",
+        "serve_port": {{params.serve_port}}
       }
     depends_on: [model-compile-script]
     tags: [apr, manifest]
@@ -193,8 +193,8 @@ policy:
 
 outputs:
   binary_path:
-    value: "/opt/apr/bin/model-server"
+    value: "{{params.install_dir}}/bin/model-server"
     description: "Compiled model server binary"
   serve_port:
-    value: "8080"
+    value: "{{params.serve_port}}"
     description: "Model inference HTTP port"

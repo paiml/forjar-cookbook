@@ -65,7 +65,7 @@ resources:
       # Managed by forjar — web production stack
       server {
         listen 80;
-        server_name example.com;
+        server_name {{params.domain}};
         root /var/www/html;
       }
     depends_on: [web-packages]

@@ -72,8 +72,8 @@ resources:
     owner: root
     mode: '0644'
     content: |
-      Package: forjar
-      Version: 1.0.0
+      Package: {{params.package_name}}
+      Version: {{params.package_version}}
       Architecture: amd64
       Maintainer: Forjar Team <team@forjar.dev>
       Description: Infrastructure convergence tool
@@ -118,8 +118,8 @@ resources:
     mode: '0644'
     content: |
       # Managed by forjar — fleet provisioning
-      package: forjar
-      version: 1.0.0
+      package: {{params.package_name}}
+      version: {{params.package_version}}
       targets: all
       strategy: rolling
     depends_on: [repo-config]

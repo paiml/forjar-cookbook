@@ -57,8 +57,8 @@ resources:
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
         export PATH="$HOME/.cargo/bin:$PATH"
       fi
-      rustup target add aarch64-unknown-linux-musl 2>/dev/null || true
-      echo "Cross toolchain ready for aarch64-unknown-linux-musl"
+      rustup target add {{params.target_triple}} 2>/dev/null || true
+      echo "Cross toolchain ready for {{params.target_triple}}"
     depends_on: [cross-toolchain]
     tags: [rust, cross, setup]
     resource_group: cross-build
@@ -81,7 +81,7 @@ resources:
     mode: '0644'
     content: |
       # Managed by forjar — cross-compilation config
-      [target.aarch64-unknown-linux-musl]
+      [target.{{params.target_triple}}]
       linker = "aarch64-linux-gnu-gcc"
     depends_on: [cargo-config-dir]
     tags: [rust, cross, config]
@@ -108,11 +108,11 @@ resources:
       set -euo pipefail
       export PATH="$HOME/.cargo/bin:$PATH"
       CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-gnu-gcc \
-      cargo install --target aarch64-unknown-linux-musl \
-        --root /tmp/cross-out --force forjar 2>/dev/null && \
-        cp /tmp/cross-out/bin/forjar /tmp/cross-build/forjar || \
+      cargo install --target {{params.target_triple}} \
+        --root /tmp/cross-out --force {{params.crate_name}} 2>/dev/null && \
+        cp /tmp/cross-out/bin/{{params.crate_name}} {{params.target_path}} || \
         echo "Cross build skipped — crate not available"
-      [ -f /tmp/cross-build/forjar ] && file /tmp/cross-build/forjar || true
+      [ -f {{params.target_path}} ] && file {{params.target_path}} || true
     depends_on: [rust-setup-script, cargo-config, output-dir]
     tags: [rust, cross, build]
     resource_group: cross-build
@@ -125,7 +125,7 @@ resources:
     mode: '0755'
     content: |
       #!/bin/bash
-      BINARY="/tmp/cross-build/forjar"
+      BINARY="{{params.target_path}}"
       if [ -f "$BINARY" ]; then
         echo "Binary: $BINARY"
         file "$BINARY"
@@ -153,8 +153,8 @@ policy:
 
 outputs:
   binary_path:
-    value: "/tmp/cross-build/forjar"
+    value: "{{params.target_path}}"
     description: "Cross-compiled binary path"
   target_triple:
-    value: "aarch64-unknown-linux-musl"
+    value: "{{params.target_triple}}"
     description: "Build target triple"

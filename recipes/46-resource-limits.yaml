@@ -41,10 +41,10 @@ resources:
     mode: '0644'
     content: |
       # Managed by forjar — global resource limits
-      * soft nofile 65535
-      * hard nofile 131072
-      * soft nproc  65535
-      * hard nproc  131072
+      * soft nofile {{params.nofile_soft}}
+      * hard nofile {{params.nofile_hard}}
+      * soft nproc  {{params.nproc_soft}}
+      * hard nproc  {{params.nproc_hard}}
       * hard core   0
     tags: [limits, global]
     resource_group: resource-limits
@@ -55,12 +55,13 @@ resources:
     path: /etc/security/limits.d/98-forjar-services.conf
     owner: root
     mode: '0644'
+    depends_on: [limits-global]
     content: |
       # Managed by forjar — service user resource limits
-      root soft memlock unlimited
-      root hard memlock unlimited
-      root soft nofile  131072
-      root hard nofile  131072
+      root soft memlock {{params.memlock}}
+      root hard memlock {{params.memlock}}
+      root soft nofile  {{params.nofile_hard}}
+      root hard nofile  {{params.nofile_hard}}
     tags: [limits, services]
     resource_group: resource-limits
 
@@ -104,8 +105,8 @@ policy:
 
 outputs:
   nofile_hard:
-    value: "131072"
+    value: "{{params.nofile_hard}}"
     description: "Hard file descriptor limit"
   nproc_hard:
-    value: "131072"
+    value: "{{params.nproc_hard}}"
     description: "Hard process count limit"

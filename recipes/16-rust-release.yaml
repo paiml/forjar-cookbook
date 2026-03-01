@@ -72,11 +72,11 @@ resources:
       #!/bin/bash
       set -euo pipefail
       export PATH="$HOME/.cargo/bin:$PATH"
-      CARGO_PROFILE_RELEASE_OPT_LEVEL=3 \
+      CARGO_PROFILE_RELEASE_OPT_LEVEL={{params.opt_level}} \
       CARGO_PROFILE_RELEASE_LTO=true \
       CARGO_PROFILE_RELEASE_STRIP=true \
       CARGO_PROFILE_RELEASE_PANIC=unwind \
-      cargo install --root /tmp/forjar-build --force forjar 2>/dev/null || \
+      cargo install --root /tmp/{{params.crate_name}}-build --force {{params.crate_name}} 2>/dev/null || \
         echo "Build skipped — crate not available"
     depends_on: [rust-toolchain]
     tags: [rust, build]
@@ -90,7 +90,7 @@ resources:
     mode: '0755'
     content: |
       #!/bin/bash
-      BINARY="/usr/local/bin/forjar"
+      BINARY="{{params.target_path}}"
       if [ -x "$BINARY" ]; then
         echo "Binary: $BINARY"
         file "$BINARY"
@@ -117,8 +117,8 @@ policy:
 
 outputs:
   binary_path:
-    value: "/usr/local/bin/forjar"
+    value: "{{params.target_path}}"
     description: "Deployed binary path"
   opt_level:
-    value: "3"
+    value: "{{params.opt_level}}"
     description: "Optimization level"

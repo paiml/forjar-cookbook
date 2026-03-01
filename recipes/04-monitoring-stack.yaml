@@ -31,6 +31,7 @@ machines:
       privileged: false
       init: true
 
+# Prometheus → Grafana → node_exporter observability pipeline
 resources:
   prometheus-data:
     type: file

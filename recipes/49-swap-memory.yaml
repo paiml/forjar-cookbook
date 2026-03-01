@@ -41,8 +41,8 @@ resources:
     content: |
       #!/bin/bash
       set -euo pipefail
-      SWAP="/swapfile"
-      SIZE=2048
+      SWAP="{{params.swap_path}}"
+      SIZE={{params.swap_size_mb}}
       if [ -f "$SWAP" ]; then
         CURRENT=$(stat -c%s "$SWAP" 2>/dev/null || echo 0)
         DESIRED=$((SIZE * 1024 * 1024))
@@ -75,8 +75,8 @@ resources:
     mode: '0644'
     content: |
       # Managed by forjar — swap and memory tuning
-      vm.swappiness = 10
-      vm.vfs_cache_pressure = 50
+      vm.swappiness = {{params.swappiness}}
+      vm.vfs_cache_pressure = {{params.vfs_cache_pressure}}
       vm.oom_kill_allocating_task = 1
     tags: [swap, sysctl]
     resource_group: swap-memory
@@ -109,8 +109,8 @@ policy:
 
 outputs:
   swap_path:
-    value: "/swapfile"
+    value: "{{params.swap_path}}"
     description: "Swapfile location"
   swap_size:
-    value: "2048MB"
+    value: "{{params.swap_size_mb}}MB"
     description: "Configured swap size"

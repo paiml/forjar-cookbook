@@ -64,8 +64,8 @@ resources:
   mlops-user:
     type: user
     machine: target
-    name: mlops
-    home: /home/mlops
+    name: "{{params.user}}"
+    home: "/home/{{params.user}}"
     shell: /bin/bash
     groups: [sudo]
     depends_on: [dev-packages]
@@ -92,7 +92,7 @@ resources:
     mode: '0644'
     content: |
       # Managed by forjar — sovereign AI stack
-      backend=rocm
+      backend={{params.gpu_backend}}
       devices=all
       compute_mode=exclusive
     depends_on: [gpu-config-dir]
@@ -119,8 +119,8 @@ resources:
     mode: '0644'
     content: |
       # Managed by forjar — sovereign AI model config
-      model: llama-7b
-      backend: rocm
+      model: {{params.model_name}}
+      backend: {{params.gpu_backend}}
       port: 8080
       pipeline: ingest-train-serve
     depends_on: [model-dir]
@@ -196,7 +196,7 @@ resources:
           {"name": "secrets", "recipes": ["22-secrets-lifecycle"]}
         ],
         "total_layers": 6,
-        "gpu_backend": "rocm",
+        "gpu_backend": "{{params.gpu_backend}}",
         "conflict_free": true
       }
     depends_on: [mlops-user, monitoring-config, secrets-config]

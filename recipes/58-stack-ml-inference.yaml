@@ -64,7 +64,7 @@ resources:
     mode: '0644'
     content: |
       # Managed by forjar — ML inference stack
-      backend=rocm
+      backend={{params.gpu_backend}}
       devices=all
       compute_mode=exclusive
       memory_fraction=0.9
@@ -92,8 +92,8 @@ resources:
     mode: '0644'
     content: |
       # Managed by forjar — ML inference stack
-      model: llama-7b
-      backend: rocm
+      model: {{params.model_name}}
+      backend: {{params.gpu_backend}}
       port: 8080
       max_batch_size: 32
       quantization: int8
@@ -150,7 +150,7 @@ resources:
           {"name": "monitoring", "recipes": ["04-monitoring-stack"]},
           {"name": "secrets", "recipes": ["22-secrets-lifecycle"]}
         ],
-        "gpu_backend": "rocm",
+        "gpu_backend": "{{params.gpu_backend}}",
         "conflict_free": true
       }
     depends_on: [monitoring-config, secrets-dir]

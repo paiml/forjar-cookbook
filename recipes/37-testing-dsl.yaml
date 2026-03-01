@@ -64,7 +64,7 @@ resources:
     owner: root
     mode: '0644'
     content: |
-      name: webserver-recipe-tests
+      name: "{{params.test_name}}"
       recipe: recipes/webserver.yaml
       tests:
         - name: plan-produces-resources
@@ -101,7 +101,7 @@ resources:
       #!/bin/bash
       set -euo pipefail
       echo "=== forjar test runner ==="
-      echo "Running: webserver-recipe-tests"
+      echo "Running: {{params.test_name}}"
       echo "  plan-produces-resources: PASS"
       echo "  apply-converges: PASS"
       echo "  idempotent-reapply: PASS"

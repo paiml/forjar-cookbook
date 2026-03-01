@@ -75,8 +75,8 @@ resources:
   dev-user:
     type: user
     machine: target
-    name: dev
-    home: /home/dev
+    name: "{{params.user}}"
+    home: "{{params.home}}"
     shell: /bin/bash
     groups: [sudo]
     depends_on: [dev-packages]
@@ -103,7 +103,7 @@ resources:
     mode: '0644'
     content: |
       # Managed by forjar — toolchain pin
-      version=1.82.0
+      version={{params.rust_version}}
       channel=stable
     depends_on: [toolchain-dir]
     tags: [stack, toolchain]

@@ -47,7 +47,7 @@ resources:
     type: file
     machine: target
     state: directory
-    path: /tmp/build-farm/sandbox
+    path: "{{params.output_dir}}/sandbox"
     owner: root
     mode: '0755'
     depends_on: [build-deps]
@@ -57,7 +57,7 @@ resources:
   sandbox-config:
     type: file
     machine: target
-    path: /tmp/build-farm/sandbox/config.yaml
+    path: "{{params.output_dir}}/sandbox/config.yaml"
     owner: root
     mode: '0644'
     content: |
@@ -74,7 +74,7 @@ resources:
     type: file
     machine: target
     state: directory
-    path: /tmp/build-farm/static
+    path: "{{params.output_dir}}/static"
     owner: root
     mode: '0755'
     depends_on: [build-deps]
@@ -92,7 +92,7 @@ resources:
       set -euo pipefail
       echo "Building static musl binary..."
       echo "Target: x86_64-unknown-linux-musl"
-      echo "Output: /tmp/build-farm/static/"
+      echo "Output: {{params.output_dir}}/static/"
     depends_on: [static-output-dir]
     tags: [stack, static-build]
     resource_group: static-build
@@ -102,7 +102,7 @@ resources:
     type: file
     machine: target
     state: directory
-    path: /tmp/build-farm/cross
+    path: "{{params.output_dir}}/cross"
     owner: root
     mode: '0755'
     depends_on: [build-deps]
@@ -120,7 +120,7 @@ resources:
       set -euo pipefail
       echo "Cross-compiling for aarch64..."
       echo "Target: aarch64-unknown-linux-musl"
-      echo "Output: /tmp/build-farm/cross/"
+      echo "Output: {{params.output_dir}}/cross/"
     depends_on: [cross-output-dir]
     tags: [stack, cross-compile]
     resource_group: cross-compile
@@ -129,7 +129,7 @@ resources:
   stack-manifest:
     type: file
     machine: target
-    path: /tmp/build-farm/stack-manifest.json
+    path: "{{params.output_dir}}/stack-manifest.json"
     owner: root
     mode: '0644'
     content: |

@@ -68,15 +68,15 @@ resources:
   spec-file:
     type: file
     machine: rpm-host
-    path: /root/rpmbuild/SPECS/forjar.spec
+    path: /root/rpmbuild/SPECS/{{params.pkg_name}}.spec
     owner: root
     mode: '0644'
     content: |
-      Name:    forjar
-      Version: 1.0.0
-      Release: 1%{?dist}
-      Summary: Declarative infrastructure convergence
-      License: MIT
+      Name:    {{params.pkg_name}}
+      Version: {{params.pkg_version}}
+      Release: {{params.pkg_release}}%{?dist}
+      Summary: {{params.pkg_summary}}
+      License: {{params.pkg_license}}
 
       %description
       Forjar converges machine state to a declared YAML configuration.
@@ -85,11 +85,11 @@ resources:
 
       %install
       mkdir -p %{buildroot}/usr/local/bin
-      install -m 755 /usr/local/bin/forjar %{buildroot}/usr/local/bin/forjar 2>/dev/null || \
-        echo '#!/bin/bash' > %{buildroot}/usr/local/bin/forjar
+      install -m 755 /usr/local/bin/{{params.pkg_name}} %{buildroot}/usr/local/bin/{{params.pkg_name}} 2>/dev/null || \
+        echo '#!/bin/bash' > %{buildroot}/usr/local/bin/{{params.pkg_name}}
 
       %files
-      /usr/local/bin/forjar
+      /usr/local/bin/{{params.pkg_name}}
     depends_on: [rpmbuild-dir]
     tags: [rpm, spec]
     resource_group: rpm-build
@@ -98,7 +98,7 @@ resources:
     type: file
     machine: rpm-host
     state: directory
-    path: /tmp/rpm-output
+    path: "{{params.output_dir}}"
     owner: root
     mode: '0755'
     tags: [rpm, output]
@@ -113,10 +113,10 @@ resources:
     content: |
       #!/bin/bash
       set -euo pipefail
-      rpmbuild -bb /root/rpmbuild/SPECS/forjar.spec 2>/dev/null && \
+      rpmbuild -bb /root/rpmbuild/SPECS/{{params.pkg_name}}.spec 2>/dev/null && \
         echo "RPM build complete" || \
         echo "RPM build skipped (rpmbuild not available or spec error)"
-      find /root/rpmbuild/RPMS -name "*.rpm" -exec cp {} /tmp/rpm-output/ \; 2>/dev/null || true
+      find /root/rpmbuild/RPMS -name "*.rpm" -exec cp {} {{params.output_dir}}/ \; 2>/dev/null || true
     depends_on: [spec-file, output-dir]
     tags: [rpm, build]
     resource_group: rpm-build
@@ -129,11 +129,11 @@ resources:
     mode: '0755'
     content: |
       #!/bin/bash
-      RPM=$(find /tmp/rpm-output -name "*.rpm" -print -quit 2>/dev/null)
+      RPM=$(find {{params.output_dir}} -name "*.rpm" -print -quit 2>/dev/null)
       if [ -n "$RPM" ]; then
         rpm -qip "$RPM" 2>/dev/null || echo "rpm -qip not available"
       else
-        echo "No RPM found in /tmp/rpm-output"
+        echo "No RPM found in {{params.output_dir}}"
       fi
     depends_on: [build-script]
     tags: [rpm, verify]
@@ -154,8 +154,8 @@ policy:
 
 outputs:
   output_dir:
-    value: "/tmp/rpm-output"
+    value: "{{params.output_dir}}"
     description: "RPM output directory"
   pkg_name:
-    value: "forjar"
+    value: "{{params.pkg_name}}"
     description: "Package name"
