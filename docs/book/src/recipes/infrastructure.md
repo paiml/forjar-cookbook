@@ -107,3 +107,36 @@ Tests mount resource type and cross-machine file sharing patterns.
 nfs-service (service)
 
 **Tier**: 3 | **Idempotency**: Strong | **Requires**: Bare-metal or VM
+
+## #22 Secrets Lifecycle
+
+Secret management lifecycle: key generation, encryption, deployment,
+rotation, and audit. Uses age encryption for ENC[age,...] markers.
+Tests the full secrets workflow from creation through rotation.
+
+**Resources**: age-key-dir (file), secrets-encrypted (file),
+rotation-script (file), audit-log (file)
+
+**Tier**: 1+2 | **Idempotency**: Strong
+
+## #23 TLS Certificates
+
+TLS certificate management: self-signed generation for dev/test,
+renewal scripting, expiry monitoring, and permission hardening.
+Validates file ownership and mode enforcement for PKI artifacts.
+
+**Resources**: cert-dir (file), self-signed-cert (file),
+renewal-script (file), expiry-check (cron)
+
+**Tier**: 1+2 | **Idempotency**: Strong
+
+## #24 Fleet Provisioning
+
+Fleet-scale provisioning: deploy base packages, node identity,
+monitoring agent, and SSH keys to multiple machines from a single
+config. Tests multi-machine orchestration at fleet scale.
+
+**Resources**: base-packages (package), node-identity (file),
+monitoring-agent (file), ssh-keys (file)
+
+**Tier**: 1+2 | **Idempotency**: Strong

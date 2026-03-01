@@ -3,7 +3,7 @@
 The cookbook contains 62 recipes organized by category. Each recipe is a
 real forjar config that gets applied to real machines during qualification.
 
-- **Infrastructure** (#1-10) — Developer workstation, web server, database, monitoring, security
+- **Infrastructure** (#1-10, #22-24) — Developer workstation, web server, database, monitoring, security, secrets, TLS, fleet
 - **Nix-Style** (#11-15) — Dev shells, toolchain pins, build sandboxes using pepita isolation
 - **Rust Builds** (#16-21) — Release builds, musl static binaries, cross-compilation
 - **Package Distribution** (#25-29) — .deb/.rpm build, private repos, fleet deploy

@@ -3,84 +3,84 @@
 Multi-recipe compositions that build complete environments by combining
 infrastructure, application, and operational recipes. These recipes
 validate forjar's ability to orchestrate complex, multi-layered
-deployments.
+deployments without conflict.
 
-## #53 Development Server
+## #53 Dev Server
 
-Full development server combining developer workstation (#1) with
-monitoring (#4) and security baseline (#9). A single recipe that
-provisions a ready-to-use development machine.
+Composability test: Dev Server stack. Layers secure baseline with
+developer workstation and toolchain pin. Validates that recipes
+compose without conflict on a single machine.
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 1+2 | **Idempotency**: Strong | **Grade**: A
 
-## #54 Production Web Stack
+## #54 Web Production
 
-Complete web application deployment: web server (#2), database (#3),
-cache (#5), and monitoring (#4). Tests multi-machine orchestration
-with cross-resource dependencies.
+Composability test: Web Production stack. Layers security, web server,
+database, monitoring, secrets, and TLS. The most complex composition
+— validates deep dependency chains across six layers.
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 1+2 | **Idempotency**: Strong | **Grade**: A
 
-## #55 CI/CD Platform
+## #55 GPU Lab
 
-Full continuous integration platform: CI runner (#6), package repo (#27),
-and monitoring (#4). Validates the build-test-deploy pipeline from
-infrastructure perspective.
+Composability test: GPU Lab stack. Layers dev tools, GPU configuration,
+monitoring, and security. Validates GPU resource composability with
+base infrastructure layers.
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 1+2 | **Idempotency**: Strong | **Grade**: A | **Requires**: GPU hardware
 
-## #56 Secure Production
+## #56 Build Farm
 
-Production hardening stack: security baseline (#9), log management (#43),
-automated patching (#47), and time sync (#44). Defense-in-depth
-configuration for production servers.
+Composability test: Build Farm stack. Layers build sandbox, static musl,
+and cross-compilation. Validates Rust build recipe composition for
+distributed build infrastructure.
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 1+2 | **Idempotency**: Strong | **Grade**: A
 
-## #57 Data Platform
+## #57 Package Pipeline
 
-Database and analytics stack: PostgreSQL (#3), Redis (#5), and
-monitoring (#4). Optimized for data-intensive workloads with
-proper backup and cache configuration.
+Composability test: Package Pipeline stack. Layers static build, deb
+package, APT repo, and fleet provisioning. Full pipeline from
+build to package to distribute to deploy.
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 1+2 | **Idempotency**: Strong | **Grade**: A
 
-## #58 GPU Compute Cluster
+## #58 ML Inference
 
-GPU-accelerated compute environment: NVIDIA GPU (#8) or ROCm GPU (#7),
-development tools (#1), and monitoring (#4). For ML training and
-inference workloads.
+Composability test: ML Inference stack. Layers security, GPU, APR model
+serving, monitoring, and secrets. Validates GPU plus model serving
+composition for inference workloads.
 
-**Tier**: 3 | **Idempotency**: Strong | **Requires**: GPU hardware
+**Tier**: 1+2 | **Idempotency**: Weak | **Grade**: A | **Requires**: GPU hardware
 
-## #59 Edge Node
+## #59 CI Infrastructure
 
-Minimal edge deployment: security baseline (#9), time sync (#44),
-hostname (#48), and cron (#40). Designed for remote nodes with
-limited connectivity and resources.
+Composability test: CI Infrastructure stack. Layers security, CI runner,
+and monitoring. Validates CI runner composition with base security
+and observability layers.
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 1+2 | **Idempotency**: Strong | **Grade**: A
 
-## #60 Build Farm
+## #60 Sovereign AI
 
-Distributed build infrastructure: CI runners (#6), Rust toolchain (#16),
-cross-compilation (#19), and package distribution (#29). For large-scale
-parallel builds.
+Composability test: Sovereign AI stack. Layers security, dev tools, GPU,
+model serving, monitoring, and secrets. The most comprehensive
+composition — validates deep six-layer stacking.
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 1+2 | **Idempotency**: Strong | **Grade**: A | **Requires**: GPU hardware
 
-## #61 Monitoring Hub
+## #61 Fleet Baseline
 
-Centralized monitoring and observability: monitoring stack (#4),
-log management (#43), and NFS server (#10) for log aggregation.
-Central point for fleet-wide visibility.
+Composability test: Fleet Baseline stack. Layers security, fleet
+provisioning, and monitoring. Validates fleet-wide baseline
+composition applied to every machine.
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 1+2 | **Idempotency**: Strong | **Grade**: A
 
-## #62 Fleet Baseline
+## #62 Cross-Distro
 
-Standard fleet baseline applied to every machine: security baseline (#9),
-hostname (#48), time sync (#44), automated patching (#47), and
-resource limits (#46). The minimum configuration for all servers.
+Composability test: Cross-Distro Release stack. Layers static build,
+deb package, RPM build, and distribution pipeline. Validates
+multi-format package release composition.
 
-**Tier**: 2+3 | **Idempotency**: Strong
+**Tier**: 1+2 | **Idempotency**: Strong | **Grade**: A
