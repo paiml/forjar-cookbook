@@ -74,7 +74,7 @@
 
     <!-- Tests badge -->
     <rect x="396" y="0" width="110" height="32" rx="6" fill="#581c87" opacity="0.8"/>
-    <text x="451" y="21" font-family="monospace" font-size="14" font-weight="600" fill="#c084fc" text-anchor="middle">202 Tests</text>
+    <text x="451" y="21" font-family="monospace" font-size="14" font-weight="600" fill="#c084fc" text-anchor="middle">204 Tests</text>
   </g>
 
   <!-- Pipeline visualization -->
