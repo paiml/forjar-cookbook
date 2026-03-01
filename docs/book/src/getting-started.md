@@ -23,6 +23,16 @@ cargo run --example validate_all
 cargo run --example plan_all
 ```
 
+## Scoring a Recipe
+
+```bash
+# Static-only score (no apply needed)
+cargo run --bin cookbook-runner -- score --file recipes/01-developer-workstation.yaml
+
+# Score all recipes and update CSV
+cargo run --example score_all
+```
+
 ## Qualifying a Recipe
 
 ```bash
