@@ -1,0 +1,27 @@
+[package]
+name = "cookbook-runner"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "Forjar cookbook recipe execution harness — validate, plan, apply, qualify"
+
+[[bin]]
+name = "cookbook-runner"
+path = "src/main.rs"
+
+[dependencies]
+clap.workspace = true
+chrono.workspace = true
+csv.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+cookbook-qualify.workspace = true
+
+[dev-dependencies]
+
+[lints]
+workspace = true

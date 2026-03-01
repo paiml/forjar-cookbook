@@ -1,0 +1,113 @@
+//! Qualification report formatting and verdict logic.
+
+use crate::QualifyResult;
+use std::path::Path;
+
+/// Verdict from a full qualification cycle.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum QualifyVerdict {
+    /// All steps passed and idempotency confirmed.
+    Qualified,
+    /// Validation step failed.
+    ValidationFailed,
+    /// Plan step failed.
+    PlanFailed,
+    /// First apply step failed.
+    ApplyFailed,
+    /// Second apply was not idempotent.
+    IdempotencyFailed,
+}
+
+impl QualifyVerdict {
+    /// Whether this verdict represents a successful qualification.
+    #[must_use]
+    pub const fn is_qualified(&self) -> bool {
+        matches!(self, Self::Qualified)
+    }
+
+    /// Human-readable error message, if not qualified.
+    #[must_use]
+    pub const fn error_message(&self) -> Option<&'static str> {
+        match self {
+            Self::Qualified => None,
+            Self::ValidationFailed => Some("validation failed"),
+            Self::PlanFailed => Some("plan failed"),
+            Self::ApplyFailed => Some("first apply failed"),
+            Self::IdempotencyFailed => Some("idempotency check failed"),
+        }
+    }
+}
+
+/// Determine the verdict from a qualification result.
+#[must_use]
+pub fn verdict(result: &QualifyResult) -> QualifyVerdict {
+    if result.validate.exit_code != 0 {
+        return QualifyVerdict::ValidationFailed;
+    }
+    if result.plan.as_ref().is_some_and(|p| p.exit_code != 0) {
+        return QualifyVerdict::PlanFailed;
+    }
+    if result
+        .first_apply
+        .as_ref()
+        .is_some_and(|a| a.exit_code != 0)
+    {
+        return QualifyVerdict::ApplyFailed;
+    }
+    if !result.idempotent {
+        return QualifyVerdict::IdempotencyFailed;
+    }
+    QualifyVerdict::Qualified
+}
+
+/// Format a validate-only report line.
+#[must_use]
+pub fn format_validate_report(file: &Path, exit_code: i32, duration_ms: u64) -> String {
+    if exit_code == 0 {
+        format!("OK: {} ({}ms)", file.display(), duration_ms)
+    } else {
+        format!("FAIL: {} (exit {})", file.display(), exit_code)
+    }
+}
+
+/// Format a full qualification report.
+#[must_use]
+pub fn format_qualify_report(file: &Path, result: &QualifyResult) -> String {
+    let mut lines = Vec::new();
+    lines.push(format!("Qualifying: {}", file.display()));
+    lines.push(format!(
+        "  validate: exit={} ({}ms)",
+        result.validate.exit_code, result.validate.duration_ms
+    ));
+
+    if let Some(ref plan) = result.plan {
+        lines.push(format!(
+            "  plan:     exit={} ({}ms)",
+            plan.exit_code, plan.duration_ms
+        ));
+    }
+    if let Some(ref apply) = result.first_apply {
+        lines.push(format!(
+            "  apply:    exit={} ({}ms)",
+            apply.exit_code, apply.duration_ms
+        ));
+    }
+    if let Some(ref idem) = result.idempotent_apply {
+        lines.push(format!(
+            "  idempotent: exit={} ({}ms) zero_changes={}",
+            idem.exit_code, idem.duration_ms, result.idempotent
+        ));
+    }
+
+    let v = verdict(result);
+    if v.is_qualified() {
+        lines.push(format!("QUALIFIED: {}", file.display()));
+    } else if let Some(msg) = v.error_message() {
+        lines.push(format!("FAILED: {msg}"));
+    }
+
+    lines.join("\n")
+}
+
+#[cfg(test)]
+mod tests;

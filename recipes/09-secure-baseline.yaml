@@ -1,0 +1,53 @@
+# Recipe #9: Secure Baseline
+# Tier: 2+3 — container + bare-metal
+# Idempotency: Strong
+version: "1.0"
+name: secure-baseline
+machines:
+  target:
+    hostname: target
+    addr: localhost
+resources:
+  security-pkgs:
+    type: package
+    machine: target
+    provider: apt
+    packages:
+      - fail2ban
+      - unattended-upgrades
+      - ufw
+  sshd-config:
+    type: file
+    machine: target
+    dest: /etc/ssh/sshd_config.d/forjar-hardening.conf
+    mode: "0644"
+    content: |
+      # Managed by forjar — security baseline
+      PermitRootLogin no
+      PasswordAuthentication no
+      MaxAuthTries 3
+      ClientAliveInterval 300
+      ClientAliveCountMax 2
+    depends_on: [security-pkgs]
+  fail2ban-config:
+    type: file
+    machine: target
+    dest: /etc/fail2ban/jail.local
+    mode: "0644"
+    content: |
+      [DEFAULT]
+      bantime = 3600
+      findtime = 600
+      maxretry = 5
+
+      [sshd]
+      enabled = true
+    depends_on: [security-pkgs]
+  firewall-ssh:
+    type: network
+    machine: target
+    name: allow-ssh
+    port: "22"
+    protocol: tcp
+    action: allow
+    depends_on: [security-pkgs]

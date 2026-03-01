@@ -1,0 +1,51 @@
+# Recipe #1: Developer Workstation
+# Tier: 2+3 — container + bare-metal
+# Idempotency: Strong
+version: "1.0"
+name: developer-workstation
+machines:
+  target:
+    hostname: target
+    addr: localhost
+resources:
+  dev-packages:
+    type: package
+    machine: target
+    provider: apt
+    packages:
+      - build-essential
+      - pkg-config
+      - libssl-dev
+      - git
+      - curl
+      - jq
+  cargo-tools:
+    type: package
+    machine: target
+    provider: cargo
+    packages:
+      - ripgrep
+      - fd-find
+      - bat
+    depends_on: [dev-packages]
+  gitconfig:
+    type: file
+    machine: target
+    dest: /etc/skel/.gitconfig
+    content: |
+      [init]
+        defaultBranch = master
+      [pull]
+        rebase = true
+      [core]
+        editor = vi
+    depends_on: [dev-packages]
+  profile-d:
+    type: file
+    machine: target
+    dest: /etc/profile.d/forjar-dev.sh
+    mode: "0644"
+    content: |
+      # Managed by forjar — developer workstation profile
+      export EDITOR=vi
+      export PATH="$HOME/.cargo/bin:$PATH"

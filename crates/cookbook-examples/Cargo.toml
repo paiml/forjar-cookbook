@@ -1,0 +1,16 @@
+[package]
+name = "cookbook-examples"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "Forjar cookbook examples — validate_all, plan_all, idempotency_check"
+
+[dependencies]
+
+[dev-dependencies]
+
+[lints]
+workspace = true
