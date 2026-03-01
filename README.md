@@ -40,7 +40,7 @@ make update-qualifications
 ## Qualification Dashboard
 
 <!-- QUALIFICATION_TABLE_START -->
-**Qualification Summary** (updated: 2026-03-01 17:04 UTC)
+**Qualification Summary** (updated: 2026-03-01 19:00 UTC)
 
 | Status | Count |
 |--------|-------|
@@ -53,8 +53,8 @@ make update-qualifications
 | Grade | Count |
 |-------|-------|
 | A | 0 |
-| B | 0 |
-| C | 56 |
+| B | 11 |
+| C | 45 |
 | D | 0 |
 | F | 5 |
 
@@ -62,13 +62,13 @@ make update-qualifications
 |---|--------|----------|--------|-------|------|------------|------------|------------|-------|---------|
 | 1 | developer-workstation | infra | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 7.6s | 408ms | 76 | — |
 | 2 | web-server | infra | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 11.5s | 971ms | 84 | — |
-| 3 | postgresql-database | infra | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 17.6s | 364ms | 87 | — |
-| 4 | monitoring-stack | infra | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Weak | 9.2s | 429ms | 87 | — |
-| 5 | redis-cache | infra | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Weak | 9.1s | 382ms | 87 | — |
+| 3 | postgresql-database | infra | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![B](https://img.shields.io/badge/B-blue) | 2+3 | Strong | 17.6s | 364ms | 87 | — |
+| 4 | monitoring-stack | infra | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![B](https://img.shields.io/badge/B-blue) | 2+3 | Weak | 9.2s | 429ms | 87 | — |
+| 5 | redis-cache | infra | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![B](https://img.shields.io/badge/B-blue) | 2+3 | Weak | 9.1s | 382ms | 87 | — |
 | 6 | ci-runner | infra | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 3 | Strong | 8.1s | 363ms | 85 | — |
 | 7 | rocm-gpu | gpu | ![blocked](https://img.shields.io/badge/BLOCKED-red) | ![F](https://img.shields.io/badge/F-red) | 3 | Strong | — | — | 0 | FJ-1126: ROCm userspace not installed |
 | 8 | nvidia-gpu | gpu | ![blocked](https://img.shields.io/badge/BLOCKED-red) | ![F](https://img.shields.io/badge/F-red) | 3 | Strong | — | — | 0 | FJ-1127: No NVIDIA hardware |
-| 9 | secure-baseline | infra | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 36.8s | 355ms | 86 | — |
+| 9 | secure-baseline | infra | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![B](https://img.shields.io/badge/B-blue) | 2+3 | Strong | 36.8s | 355ms | 87 | — |
 | 10 | nfs-file-server | infra | ![blocked](https://img.shields.io/badge/BLOCKED-red) | ![F](https://img.shields.io/badge/F-red) | 3 | Strong | — | — | 0 | FJ-1128: NFS kernel modules not loaded |
 | 11 | dev-shell | nix | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 1+2 | Strong | 714ms | 22ms | 88 | — |
 | 12 | toolchain-pin | nix | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 1+2 | Strong | 980ms | 21ms | 87 | — |
@@ -81,7 +81,7 @@ make update-qualifications
 | 20 | sovereign-stack | advanced | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 1.2s | 21ms | 78 | — |
 | 21 | apr-model | advanced | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 3 | Weak | 1.5s | 24ms | 78 | — |
 | 22 | secrets-lifecycle | advanced | ![blocked](https://img.shields.io/badge/BLOCKED-red) | ![F](https://img.shields.io/badge/F-red) | 2+3 | Strong | — | — | 0 | FJ-1129: Secret provider exec fails |
-| 23 | tls-certificates | advanced | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 1.1s | 23ms | 87 | — |
+| 23 | tls-certificates | advanced | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![B](https://img.shields.io/badge/B-blue) | 2+3 | Strong | 1.1s | 23ms | 88 | — |
 | 24 | fleet-provisioning | advanced | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 1.2s | 21ms | 78 | — |
 | 25 | apt-repo | packages | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 883ms | 22ms | 78 | — |
 | 26 | deb-package | packages | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 1.1s | 23ms | 87 | — |
@@ -98,19 +98,19 @@ make update-qualifications
 | 37 | testing-dsl | opentofu | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 1+2 | Strong | 713ms | 22ms | 78 | — |
 | 38 | state-encryption | opentofu | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 1+2 | Strong | 968ms | 22ms | 88 | — |
 | 39 | cross-config | opentofu | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 1+2 | Strong | 736ms | 23ms | 88 | — |
-| 40 | scheduled-tasks | linux | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 1.2s | 21ms | 87 | — |
-| 41 | user-provisioning | linux | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 375ms | 22ms | 86 | — |
+| 40 | scheduled-tasks | linux | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![B](https://img.shields.io/badge/B-blue) | 2+3 | Strong | 1.2s | 21ms | 88 | — |
+| 41 | user-provisioning | linux | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![B](https://img.shields.io/badge/B-blue) | 2+3 | Strong | 375ms | 22ms | 86 | — |
 | 42 | kernel-tuning | linux | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 910ms | 20ms | 86 | — |
 | 43 | log-management | linux | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 1.0s | 22ms | 86 | — |
 | 44 | time-sync | linux | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 810ms | 21ms | 87 | — |
-| 45 | custom-systemd-units | linux | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 970ms | 20ms | 87 | — |
+| 45 | custom-systemd-units | linux | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![B](https://img.shields.io/badge/B-blue) | 2+3 | Strong | 970ms | 20ms | 88 | — |
 | 46 | resource-limits | linux | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 758ms | 22ms | 85 | — |
 | 47 | automated-patching | linux | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 988ms | 21ms | 87 | — |
 | 48 | hostname-locale-dns | linux | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 1.0s | 19ms | 85 | — |
 | 49 | swap-memory | linux | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 3 | Weak | 711ms | 22ms | 87 | — |
-| 50 | failure-partial-apply | failure | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 788ms | 23ms | 88 | — |
-| 51 | failure-state-recovery | failure | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 936ms | 24ms | 87 | — |
-| 52 | failure-idempotent-crash | failure | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 695ms | 22ms | 88 | — |
+| 50 | failure-partial-apply | failure | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![B](https://img.shields.io/badge/B-blue) | 2+3 | Strong | 788ms | 23ms | 87 | — |
+| 51 | failure-state-recovery | failure | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![B](https://img.shields.io/badge/B-blue) | 2+3 | Strong | 936ms | 24ms | 86 | — |
+| 52 | failure-idempotent-crash | failure | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![B](https://img.shields.io/badge/B-blue) | 2+3 | Strong | 695ms | 22ms | 88 | — |
 | 53 | stack-dev-server | composability | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 1.1s | 23ms | 78 | — |
 | 54 | stack-web-production | composability | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | 1.3s | 22ms | 88 | — |
 | 55 | stack-gpu-lab | composability | ![qualified](https://img.shields.io/badge/QUALIFIED-brightgreen) | ![C](https://img.shields.io/badge/C-yellow) | 3 | Strong | 1.1s | 21ms | 87 | — |
