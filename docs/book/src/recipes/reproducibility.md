@@ -133,7 +133,17 @@ forjar store gc --dry-run           # Preview garbage collection
 forjar store diff <hash>            # Diff against upstream
 forjar archive pack <hash>          # Pack into .far
 forjar convert --reproducible       # Auto-convert recipe
+forjar store-import apt nginx       # Import from any provider
+forjar store-import --list-providers # List 8 supported providers
 ```
+
+## Runtime Executors
+
+Behind the CLI, three executor modules handle the build lifecycle:
+
+- **Sandbox executor** (FJ-1316): 10-step lifecycle — create namespace, overlay mount, bind inputs read-only, cgroup limits, seccomp BPF (Full level: deny connect/mount/ptrace), build, hash, store, cleanup.
+- **Substitution protocol** (FJ-1322): local store → SSH cache → build fallback → auto-push. Avoids rebuilding when an entry already exists.
+- **Derivation executor** (FJ-1342): Resolves inputs, computes closure hash, checks store for hits (skip build), orchestrates sandbox build for misses. Supports DAG execution for chained derivations.
 
 ## Running the Series
 
