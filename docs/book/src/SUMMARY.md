@@ -13,5 +13,6 @@
   - [Failure Modes](./recipes/failure-modes.md)
   - [Composition Stacks](./recipes/composition.md)
   - [Reproducibility Series](./recipes/reproducibility.md)
+  - [Store Operations](./recipes/store-operations.md)
 - [Runner Setup](./runner-setup.md)
 - [Troubleshooting](./troubleshooting.md)
