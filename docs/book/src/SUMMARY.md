@@ -12,5 +12,6 @@
   - [Linux Administration](./recipes/linux-admin.md)
   - [Failure Modes](./recipes/failure-modes.md)
   - [Composition Stacks](./recipes/composition.md)
+  - [Reproducibility Series](./recipes/reproducibility.md)
 - [Runner Setup](./runner-setup.md)
 - [Troubleshooting](./troubleshooting.md)
