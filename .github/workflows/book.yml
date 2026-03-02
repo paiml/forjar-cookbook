@@ -1,9 +1,17 @@
 name: Book
+
 on:
   push:
+    branches: [master]
     paths: ['docs/book/**']
-  pull_request:
-    paths: ['docs/book/**']
+
+permissions:
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -22,7 +30,17 @@ jobs:
         run: mdbook build docs/book
 
       - name: Upload artifact
-        if: github.ref == 'refs/heads/master'
         uses: actions/upload-pages-artifact@v3
         with:
           path: docs/book/book
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

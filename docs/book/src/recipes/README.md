@@ -1,6 +1,6 @@
 # Recipes
 
-The cookbook contains 62 recipes organized by category. Each recipe is a
+The cookbook contains 67 recipes organized by category. Each recipe is a
 real forjar config that gets applied to real machines during qualification.
 
 - **Infrastructure** (#1-10, #22-24) — Workstation, web, database, monitoring, security, secrets, TLS, fleet
@@ -11,3 +11,4 @@ real forjar config that gets applied to real machines during qualification.
 - **Linux Administration** (#40-49) — Cron, users, sysctl, logs, time sync, systemd, patching
 - **Failure Modes** (#50-52) — Partial apply recovery, state recovery, crash resilience
 - **Composition Stacks** (#53-62) — Multi-recipe compositions building full environments
+- **Reproducibility Series** (#63-67) — Content-addressed store, sandboxed builds, SSH cache, CI gates, profile rollback
