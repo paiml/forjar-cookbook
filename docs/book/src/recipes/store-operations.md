@@ -129,6 +129,57 @@ The conversion ladder: Impure -> Constrained -> Pinned -> Pure.
 `--apply` handles steps 1-3 automatically (version pins, store flags,
 lock file generation).
 
+## Sandbox Builds
+
+Build packages in an isolated namespace with full reproducibility:
+
+```yaml
+# In forjar.yaml
+resources:
+  app:
+    type: package
+    machine: build-host
+    packages: [ripgrep]
+    provider: cargo
+    version: "14.1.0"
+    store: true
+    sandbox:
+      level: full         # full | network_only | minimal | none
+      memory_mb: 2048
+      cpus: 4
+      timeout_secs: 600
+```
+
+Sandbox levels control isolation:
+
+| Level | Network | Filesystem | Seccomp | Cgroups |
+|-------|---------|-----------|---------|---------|
+| Full | blocked | read-only inputs, overlayfs | BPF filter | memory + CPU |
+| NetworkOnly | allowed | read-only inputs | none | memory + CPU |
+| Minimal | allowed | PID/mount namespace | none | none |
+| None | allowed | no isolation | none | none |
+
+The sandbox lifecycle (10 steps): create namespace, mount overlayfs,
+bind inputs read-only, apply cgroups, apply seccomp, execute script,
+extract outputs, hash output, atomic store, cleanup namespace.
+
+## Profile Management
+
+Manage profile generations for instant rollback:
+
+```bash
+# List profile generations
+forjar store list --generations
+
+# Rollback to a previous generation
+forjar store rollback --generation 2
+
+# Current profile is an atomic symlink — rollback is crash-safe
+```
+
+Profile generations let you switch between different versions of your
+entire dependency set atomically. See recipe #67 for a complete example.
+
 ## Store Listing
 
 Browse store entries with provenance info:
@@ -143,3 +194,29 @@ forjar store list --show-provider
 # JSON output
 forjar store list --json
 ```
+
+## Execution Architecture
+
+All store operations bridge plan generation to actual execution via
+forjar's transport layer. Every shell command is validated through the
+I8 bashrs provability gate before execution.
+
+| Operation | Module | Pipeline |
+|-----------|--------|----------|
+| Import | `provider_exec.rs` | validate -> generate CLI -> I8 gate -> stage -> execute -> hash -> store |
+| GC | `gc_exec.rs` | mark roots -> sweep -> journal -> delete -> report |
+| Pin | `pin_resolve.rs` | query provider CLIs -> parse versions -> write lock file |
+| Cache | `cache_exec.rs` | rsync to/from SSH -> verify hash -> atomic store |
+| Convert | `convert_exec.rs` | backup -> modify YAML -> version pins -> store flags -> lock file |
+| Diff/Sync | `sync_exec.rs` | query upstream -> compare hashes -> re-import -> replay derivations |
+| Sandbox | `sandbox_run.rs` | create namespace -> isolate -> build -> extract -> hash -> store |
+
+## Related Recipes
+
+| Recipe | Topic | Key Feature |
+|--------|-------|-------------|
+| #63 | [Version-Pinned Store](../recipes/store-operations.md) | `store: true` + lock file |
+| #64 | [Cargo Sandbox](../recipes/store-operations.md) | `sandbox: full` + isolation |
+| #65 | [SSH Cache](../recipes/store-operations.md) | substitution protocol |
+| #66 | [CI Repro Gate](../recipes/store-operations.md) | reproducibility scoring |
+| #67 | [Profile Rollback](../recipes/store-operations.md) | generation management |
