@@ -1,0 +1,180 @@
+# Recipe: 67-store-profile-rollback
+# Tier: 1+2 (validate + container apply)
+# Idempotency: strong
+# Budget: first_apply < 60s, idempotent < 5s
+#
+# Profile generation management and rollback.
+# Demonstrates: profile generations, atomic symlink switching, rollback.
+# Fifth recipe in the reproducibility series (FJ-1332).
+
+version: '1.0'
+name: store-profile-rollback
+description: "Profile generation management with instant rollback"
+
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
+params:
+  store_dir: /var/lib/forjar/store
+  profiles_dir: /var/lib/forjar/profiles
+  gc_keep_generations: 5
+
+machines:
+  target:
+    hostname: target
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-67-profile-rollback
+      ephemeral: false
+      privileged: false
+      init: true
+
+resources:
+  # --- Store Infrastructure ---
+  store-dir:
+    type: file
+    machine: target
+    state: directory
+    path: "{{params.store_dir}}"
+    owner: root
+    mode: '0755'
+    tags: [store, infrastructure]
+    resource_group: store-infra
+
+  profiles-dir:
+    type: file
+    machine: target
+    state: directory
+    path: "{{params.profiles_dir}}"
+    owner: root
+    mode: '0755'
+    depends_on: [store-dir]
+    tags: [store, profiles]
+    resource_group: profiles
+
+  gc-roots-dir:
+    type: file
+    machine: target
+    state: directory
+    path: "{{params.store_dir}}/.gc-roots"
+    owner: root
+    mode: '0755'
+    depends_on: [store-dir]
+    tags: [store, gc]
+    resource_group: store-infra
+
+  # --- Packages for Generation 1 ---
+  nginx:
+    type: package
+    machine: target
+    provider: apt
+    packages:
+      - nginx
+    version: "1.24.0-2ubuntu7.3"
+    store: true
+    depends_on: [profiles-dir]
+    tags: [store, package, gen1]
+    resource_group: gen1
+
+  # --- Generation Config ---
+  gen-config:
+    type: file
+    machine: target
+    path: /etc/forjar/generation.yaml
+    owner: root
+    mode: '0644'
+    content: |
+      # Managed by forjar — generation management
+      profiles_dir: "{{params.profiles_dir}}"
+      current_generation: 1
+      packages:
+        - name: nginx
+          version: "1.24.0-2ubuntu7.3"
+      rollback:
+        enabled: true
+        keep_generations: {{params.gc_keep_generations}}
+    depends_on: [nginx]
+    tags: [store, generation, config]
+    resource_group: generation
+
+  # --- GC Configuration ---
+  gc-config:
+    type: file
+    machine: target
+    path: /etc/forjar/gc.yaml
+    owner: root
+    mode: '0644'
+    content: |
+      # Managed by forjar — garbage collection config
+      store_dir: "{{params.store_dir}}"
+      profiles_dir: "{{params.profiles_dir}}"
+      gc_roots_dir: "{{params.store_dir}}/.gc-roots"
+      keep_generations: {{params.gc_keep_generations}}
+      older_than_days: 90
+      dry_run: false
+      gc_roots:
+        - current_profile
+        - lock_file_pins
+        - gc_roots_dir
+      mark_sweep:
+        follow_references: true
+        conservative_scan: true
+    depends_on: [gen-config]
+    tags: [store, gc, config]
+    resource_group: gc
+
+  # --- Profile Manifest ---
+  profile-manifest:
+    type: file
+    machine: target
+    path: /etc/forjar/profile-manifest.yaml
+    owner: root
+    mode: '0644'
+    content: |
+      # Managed by forjar — profile and rollback manifest
+      profiles:
+        dir: "{{params.profiles_dir}}"
+        current: 1
+        generations:
+          - id: 0
+            description: "initial empty state"
+          - id: 1
+            description: "nginx 1.24.0 installed"
+            packages: [nginx]
+      rollback:
+        mechanism: atomic_symlink_switch
+        description: "rename(2) — crash-safe instant rollback"
+      gc:
+        strategy: mark_and_sweep
+        roots: [current_profile, lock_pins, gc_roots_dir]
+        keep_generations: {{params.gc_keep_generations}}
+    depends_on: [gc-config]
+    tags: [store, manifest]
+    resource_group: manifest
+
+policy:
+  failure: continue_independent
+  parallel_machines: false
+  tripwire: true
+  lock_file: true
+  ssh_retries: 3
+  pre_apply: "echo 'Converging profile generation with rollback'"
+  post_apply: "echo 'Profile generation ready — rollback available'"
+  notify:
+    on_success: "echo 'Profile generation converged'"
+    on_failure: "echo 'Profile generation failed'"
+    on_drift: "echo 'Profile generation drift detected'"
+
+outputs:
+  profiles_dir:
+    value: "{{params.profiles_dir}}"
+    description: "Profile generations directory"
+  gc_keep:
+    value: "{{params.gc_keep_generations}}"
+    description: "Number of generations to keep"

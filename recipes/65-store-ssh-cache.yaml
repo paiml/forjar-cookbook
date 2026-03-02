@@ -1,0 +1,178 @@
+# Recipe: 65-store-ssh-cache
+# Tier: 1+2 (validate + container apply)
+# Idempotency: strong
+# Budget: first_apply < 60s, idempotent < 5s
+#
+# Multi-machine SSH cache deployment.
+# Demonstrates: cache sources, substitution protocol, store distribution.
+# Third recipe in the reproducibility series (FJ-1331).
+
+version: '1.0'
+name: store-ssh-cache
+description: "Multi-machine SSH binary cache with store substitution"
+
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
+params:
+  store_dir: /var/lib/forjar/store
+  cache_dir: /var/lib/forjar/cache
+  cache_host: cache.internal
+  cache_user: forjar
+
+machines:
+  target:
+    hostname: target
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-65-ssh-cache
+      ephemeral: false
+      privileged: false
+      init: true
+
+resources:
+  # --- Store + Cache Infrastructure ---
+  store-dir:
+    type: file
+    machine: target
+    state: directory
+    path: "{{params.store_dir}}"
+    owner: root
+    mode: '0755'
+    tags: [store, infrastructure]
+    resource_group: store-infra
+
+  cache-dir:
+    type: file
+    machine: target
+    state: directory
+    path: "{{params.cache_dir}}"
+    owner: root
+    mode: '0755'
+    depends_on: [store-dir]
+    tags: [cache, infrastructure]
+    resource_group: cache-infra
+
+  # --- Cache Configuration ---
+  cache-config:
+    type: file
+    machine: target
+    path: /etc/forjar/cache.yaml
+    owner: root
+    mode: '0644'
+    content: |
+      # Managed by forjar — SSH binary cache
+      sources:
+        - type: ssh
+          host: "{{params.cache_host}}"
+          user: "{{params.cache_user}}"
+          path: "{{params.cache_dir}}"
+        - type: local
+          path: "{{params.store_dir}}"
+      auto_push: true
+      max_size_mb: 10240
+    depends_on: [cache-dir]
+    tags: [cache, config]
+    resource_group: cache-config
+
+  # --- Packages (will use cache substitution) ---
+  nginx:
+    type: package
+    machine: target
+    provider: apt
+    packages:
+      - nginx
+    version: "1.24.0-2ubuntu7.3"
+    store: true
+    depends_on: [cache-config]
+    tags: [store, package, cached]
+    resource_group: packages
+
+  curl:
+    type: package
+    machine: target
+    provider: apt
+    packages:
+      - curl
+    version: "8.5.0-2ubuntu10.6"
+    store: true
+    depends_on: [cache-config]
+    tags: [store, package, cached]
+    resource_group: packages
+
+  # --- SSH Key for Cache Access ---
+  cache-ssh-dir:
+    type: file
+    machine: target
+    state: directory
+    path: /root/.ssh
+    owner: root
+    mode: '0700'
+    tags: [cache, ssh]
+    resource_group: cache-auth
+
+  cache-known-hosts:
+    type: file
+    machine: target
+    path: /root/.ssh/known_hosts
+    owner: root
+    mode: '0644'
+    content: |
+      # Managed by forjar — cache host key
+      # Add cache.internal host key here
+    depends_on: [cache-ssh-dir]
+    tags: [cache, ssh]
+    resource_group: cache-auth
+
+  # --- Cache Manifest ---
+  cache-manifest:
+    type: file
+    machine: target
+    path: /etc/forjar/cache-manifest.yaml
+    owner: root
+    mode: '0644'
+    content: |
+      # Managed by forjar — cache deployment manifest
+      protocol: ssh-only
+      substitution_order:
+        - local_store
+        - ssh_cache
+        - build_from_scratch
+      auto_push: true
+      packages:
+        - name: nginx
+          version: "1.24.0-2ubuntu7.3"
+          store: true
+        - name: curl
+          version: "8.5.0-2ubuntu10.6"
+          store: true
+    depends_on: [nginx, curl]
+    tags: [cache, manifest]
+    resource_group: manifest
+
+policy:
+  failure: continue_independent
+  parallel_machines: false
+  tripwire: true
+  lock_file: true
+  ssh_retries: 3
+  pre_apply: "echo 'Converging SSH cache deployment'"
+  post_apply: "echo 'SSH cache deployment complete'"
+  notify:
+    on_success: "echo 'SSH cache converged'"
+    on_failure: "echo 'SSH cache failed'"
+    on_drift: "echo 'SSH cache drift detected'"
+
+outputs:
+  cache_protocol:
+    value: "ssh-only"
+    description: "Cache transport protocol"
+  cache_host:
+    value: "{{params.cache_host}}"
+    description: "SSH cache host"

@@ -1,0 +1,179 @@
+# Recipe: 64-store-cargo-sandbox
+# Tier: 1+2 (validate + container apply)
+# Idempotency: strong
+# Budget: first_apply < 120s, idempotent < 5s
+#
+# Cargo package with full sandbox isolation and input lock.
+# Demonstrates: store: true, sandbox: full, input closure tracking.
+# Second recipe in the reproducibility series (FJ-1331).
+
+version: '1.0'
+name: store-cargo-sandbox
+description: "Sandboxed cargo build with content-addressed store and input lock"
+
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
+params:
+  store_dir: /var/lib/forjar/store
+  cargo_home: /root/.cargo
+  ripgrep_version: "14.1.0"
+
+machines:
+  target:
+    hostname: target
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-64-cargo-sandbox
+      ephemeral: false
+      privileged: false
+      init: true
+
+resources:
+  # --- Store Infrastructure ---
+  store-dir:
+    type: file
+    machine: target
+    state: directory
+    path: "{{params.store_dir}}"
+    owner: root
+    mode: '0755'
+    tags: [store, infrastructure]
+    resource_group: store-infra
+
+  profiles-dir:
+    type: file
+    machine: target
+    state: directory
+    path: /var/lib/forjar/profiles
+    owner: root
+    mode: '0755'
+    depends_on: [store-dir]
+    tags: [store, infrastructure]
+    resource_group: store-infra
+
+  # --- Build Dependencies ---
+  build-deps:
+    type: package
+    machine: target
+    provider: apt
+    packages:
+      - build-essential
+      - pkg-config
+      - libssl-dev
+    version: "latest"
+    depends_on: [store-dir]
+    tags: [build, deps]
+    resource_group: build
+
+  # --- Sandboxed Cargo Build ---
+  ripgrep:
+    type: package
+    machine: target
+    provider: cargo
+    packages:
+      - ripgrep
+    version: "{{params.ripgrep_version}}"
+    store: true
+    depends_on: [build-deps]
+    tags: [store, package, sandboxed]
+    resource_group: cargo
+
+  # --- Sandbox Config ---
+  sandbox-config:
+    type: file
+    machine: target
+    path: /etc/forjar/sandbox.yaml
+    owner: root
+    mode: '0644'
+    content: |
+      # Managed by forjar — sandbox configuration
+      level: full
+      memory_mb: 2048
+      cpus: 4.0
+      timeout: 600
+      bind_mounts: []
+      env:
+        - name: CARGO_HOME
+          value: "{{params.cargo_home}}"
+        - name: CARGO_NET_OFFLINE
+          value: "false"
+    depends_on: [ripgrep]
+    tags: [store, sandbox, config]
+    resource_group: sandbox
+
+  # --- Input Lock ---
+  input-lock:
+    type: file
+    machine: target
+    path: /etc/forjar/forjar.inputs.lock.yaml
+    owner: root
+    mode: '0644'
+    content: |
+      # Managed by forjar — input lock for sandboxed cargo build
+      schema: "1.0"
+      pins:
+        ripgrep:
+          provider: cargo
+          version: "{{params.ripgrep_version}}"
+          hash: "blake3:auto-computed"
+        build-essential:
+          provider: apt
+          version: "latest"
+          hash: "blake3:auto-computed"
+    depends_on: [sandbox-config]
+    tags: [store, lock]
+    resource_group: lock
+
+  # --- Verification ---
+  build-manifest:
+    type: file
+    machine: target
+    path: /etc/forjar/build-manifest.yaml
+    owner: root
+    mode: '0644'
+    content: |
+      # Managed by forjar — sandboxed build manifest
+      sandbox:
+        level: full
+        network_blocked: true
+        filesystem_isolated: true
+      packages:
+        - name: ripgrep
+          version: "{{params.ripgrep_version}}"
+          provider: cargo
+          purity: pure
+          store: true
+      input_closure:
+        tracked: true
+        lock_file: /etc/forjar/forjar.inputs.lock.yaml
+    depends_on: [input-lock]
+    tags: [store, manifest]
+    resource_group: manifest
+
+policy:
+  failure: continue_independent
+  parallel_machines: false
+  tripwire: true
+  lock_file: true
+  ssh_retries: 3
+  pre_apply: "echo 'Converging sandboxed cargo store build'"
+  post_apply: "echo 'Sandboxed cargo build complete'"
+  notify:
+    on_success: "echo 'Cargo sandbox store converged'"
+    on_failure: "echo 'Cargo sandbox store failed'"
+    on_drift: "echo 'Cargo sandbox store drift detected'"
+
+outputs:
+  sandbox_level:
+    value: "full"
+    description: "Sandbox isolation level"
+  purity_level:
+    value: "pure"
+    description: "Recipe purity level (full sandbox)"

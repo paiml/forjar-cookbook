@@ -1,0 +1,151 @@
+# Recipe: 63-store-version-pinned
+# Tier: 1+2 (validate + container apply)
+# Idempotency: strong
+# Budget: first_apply < 60s, idempotent < 5s
+#
+# Content-addressed store with version-pinned apt packages.
+# Demonstrates: store: true, version pins, lock file generation.
+# First recipe in the reproducibility series (FJ-1330).
+
+version: '1.0'
+name: store-version-pinned
+description: "Version-pinned apt packages with content-addressed store"
+
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
+params:
+  store_dir: /var/lib/forjar/store
+  nginx_version: 1.24.0-2ubuntu7.3
+
+machines:
+  target:
+    hostname: target
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-63-store-pinned
+      ephemeral: false
+      privileged: false
+      init: true
+
+resources:
+  # --- Store Infrastructure ---
+  store-dir:
+    type: file
+    machine: target
+    state: directory
+    path: "{{params.store_dir}}"
+    owner: root
+    mode: '0755'
+    tags: [store, infrastructure]
+    resource_group: store-infra
+
+  store-gc-roots:
+    type: file
+    machine: target
+    state: directory
+    path: "{{params.store_dir}}/.gc-roots"
+    owner: root
+    mode: '0755'
+    depends_on: [store-dir]
+    tags: [store, infrastructure]
+    resource_group: store-infra
+
+  # --- Version-Pinned Packages with Store ---
+  nginx:
+    type: package
+    machine: target
+    provider: apt
+    packages:
+      - nginx
+    version: "{{params.nginx_version}}"
+    store: true
+    depends_on: [store-dir]
+    tags: [store, package, pinned]
+    resource_group: packages
+
+  curl-pinned:
+    type: package
+    machine: target
+    provider: apt
+    packages:
+      - curl
+    version: "8.5.0-2ubuntu10.6"
+    store: true
+    depends_on: [store-dir]
+    tags: [store, package, pinned]
+    resource_group: packages
+
+  # --- Lock File ---
+  lock-file:
+    type: file
+    machine: target
+    path: /etc/forjar/forjar.inputs.lock.yaml
+    owner: root
+    mode: '0644'
+    content: |
+      # Managed by forjar — version-pinned store
+      schema: "1.0"
+      pins:
+        nginx:
+          provider: apt
+          version: "{{params.nginx_version}}"
+          hash: "blake3:auto-computed"
+        curl:
+          provider: apt
+          version: "8.5.0-2ubuntu10.6"
+          hash: "blake3:auto-computed"
+    depends_on: [nginx, curl-pinned]
+    tags: [store, lock]
+    resource_group: lock
+
+  # --- Verification ---
+  store-manifest:
+    type: file
+    machine: target
+    path: /etc/forjar/store-manifest.yaml
+    owner: root
+    mode: '0644'
+    content: |
+      # Managed by forjar — store manifest
+      store_enabled: true
+      pinned_packages:
+        - name: nginx
+          version: "{{params.nginx_version}}"
+          purity: pinned
+        - name: curl
+          version: "8.5.0-2ubuntu10.6"
+          purity: pinned
+      reproducibility:
+        level: pinned
+        score_target: 75
+    depends_on: [lock-file]
+    tags: [store, manifest]
+    resource_group: manifest
+
+policy:
+  failure: continue_independent
+  parallel_machines: false
+  tripwire: true
+  lock_file: true
+  ssh_retries: 3
+  pre_apply: "echo 'Converging version-pinned store packages'"
+  post_apply: "echo 'Store packages pinned and locked'"
+  notify:
+    on_success: "echo 'Store version-pinned packages converged'"
+    on_failure: "echo 'Store version-pinned packages failed'"
+    on_drift: "echo 'Store version-pinned packages drift detected'"
+
+outputs:
+  store_path:
+    value: "{{params.store_dir}}"
+    description: "Content-addressed store path"
+  purity_level:
+    value: "pinned"
+    description: "Recipe purity level"

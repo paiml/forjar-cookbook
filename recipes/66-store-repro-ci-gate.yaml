@@ -1,0 +1,199 @@
+# Recipe: 66-store-repro-ci-gate
+# Tier: 1+2 (validate + container apply)
+# Idempotency: strong
+# Budget: first_apply < 60s, idempotent < 5s
+#
+# Reproducibility score CI gate.
+# Demonstrates: reproducibility scoring, purity validation, CI gate mode.
+# Fourth recipe in the reproducibility series (FJ-1332).
+
+version: '1.0'
+name: store-repro-ci-gate
+description: "Reproducibility score CI gate with purity validation"
+
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
+params:
+  store_dir: /var/lib/forjar/store
+  min_score: 75
+  min_purity: pinned
+
+machines:
+  target:
+    hostname: target
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-66-repro-ci-gate
+      ephemeral: false
+      privileged: false
+      init: true
+
+resources:
+  # --- Store Infrastructure ---
+  store-dir:
+    type: file
+    machine: target
+    state: directory
+    path: "{{params.store_dir}}"
+    owner: root
+    mode: '0755'
+    tags: [store, infrastructure]
+    resource_group: store-infra
+
+  # --- Version-Pinned Packages ---
+  nginx:
+    type: package
+    machine: target
+    provider: apt
+    packages:
+      - nginx
+    version: "1.24.0-2ubuntu7.3"
+    store: true
+    depends_on: [store-dir]
+    tags: [store, package, pinned]
+    resource_group: packages
+
+  curl:
+    type: package
+    machine: target
+    provider: apt
+    packages:
+      - curl
+    version: "8.5.0-2ubuntu10.6"
+    store: true
+    depends_on: [store-dir]
+    tags: [store, package, pinned]
+    resource_group: packages
+
+  git:
+    type: package
+    machine: target
+    provider: apt
+    packages:
+      - git
+    version: "2.43.0-1ubuntu7.2"
+    store: true
+    depends_on: [store-dir]
+    tags: [store, package, pinned]
+    resource_group: packages
+
+  # --- Lock File ---
+  lock-file:
+    type: file
+    machine: target
+    path: /etc/forjar/forjar.inputs.lock.yaml
+    owner: root
+    mode: '0644'
+    content: |
+      # Managed by forjar — CI gate lock file
+      schema: "1.0"
+      pins:
+        nginx:
+          provider: apt
+          version: "1.24.0-2ubuntu7.3"
+          hash: "blake3:auto-computed"
+        curl:
+          provider: apt
+          version: "8.5.0-2ubuntu10.6"
+          hash: "blake3:auto-computed"
+        git:
+          provider: apt
+          version: "2.43.0-1ubuntu7.2"
+          hash: "blake3:auto-computed"
+    depends_on: [nginx, curl, git]
+    tags: [store, lock]
+    resource_group: lock
+
+  # --- CI Gate Configuration ---
+  ci-gate-config:
+    type: file
+    machine: target
+    path: /etc/forjar/ci-gate.yaml
+    owner: root
+    mode: '0644'
+    content: |
+      # Managed by forjar — reproducibility CI gate
+      validation:
+        check_recipe_purity: true
+        min_purity_level: "{{params.min_purity}}"
+        check_reproducibility_score: true
+        min_score: {{params.min_score}}
+        check_lock_staleness: true
+        strict_mode: true
+      scoring:
+        weights:
+          purity: 0.5
+          store_coverage: 0.3
+          lock_coverage: 0.2
+        grade_thresholds:
+          A: 90
+          B: 75
+          C: 50
+          D: 25
+    depends_on: [lock-file]
+    tags: [ci, gate, config]
+    resource_group: ci-gate
+
+  # --- CI Gate Report ---
+  ci-gate-report:
+    type: file
+    machine: target
+    path: /etc/forjar/ci-gate-report.yaml
+    owner: root
+    mode: '0644'
+    content: |
+      # Managed by forjar — CI gate report
+      gate: reproducibility
+      min_score: {{params.min_score}}
+      min_purity: "{{params.min_purity}}"
+      resources:
+        - name: nginx
+          purity: pinned
+          store: true
+          lock_pin: true
+        - name: curl
+          purity: pinned
+          store: true
+          lock_pin: true
+        - name: git
+          purity: pinned
+          store: true
+          lock_pin: true
+      expected_result:
+        purity_score: 75.0
+        store_coverage: 100.0
+        lock_coverage: 100.0
+        composite: 87.5
+        grade: B
+        gate: PASS
+    depends_on: [ci-gate-config]
+    tags: [ci, gate, report]
+    resource_group: ci-gate
+
+policy:
+  failure: stop_on_first
+  parallel_machines: false
+  tripwire: true
+  lock_file: true
+  ssh_retries: 3
+  pre_apply: "echo 'Running reproducibility CI gate'"
+  post_apply: "echo 'Reproducibility CI gate complete'"
+  notify:
+    on_success: "echo 'CI gate PASSED'"
+    on_failure: "echo 'CI gate FAILED'"
+    on_drift: "echo 'CI gate drift detected'"
+
+outputs:
+  min_score:
+    value: "{{params.min_score}}"
+    description: "Minimum reproducibility score"
+  min_purity:
+    value: "{{params.min_purity}}"
+    description: "Minimum purity level"
