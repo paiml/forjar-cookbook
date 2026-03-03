@@ -145,6 +145,46 @@ Behind the CLI, three executor modules handle the build lifecycle:
 - **Substitution protocol** (FJ-1322): local store → SSH cache → build fallback → auto-push. Avoids rebuilding when an entry already exists.
 - **Derivation executor** (FJ-1342): Resolves inputs, computes closure hash, checks store for hits (skip build), orchestrates sandbox build for misses. Supports DAG execution for chained derivations.
 
+## Lock File Freshness
+
+The lock file (`forjar.inputs.lock.yaml`) pins every input to an
+exact version and BLAKE3 hash. Pin tripwire checks detect staleness:
+
+```bash
+# Check if all pins are fresh (CI gate)
+forjar pin --check -f forjar.yaml
+# Exit code 0 = fresh, 1 = stale or missing pins
+
+# Update a single pin
+forjar pin --update nginx -f forjar.yaml
+
+# Update all pins to latest versions
+forjar pin --update -f forjar.yaml
+```
+
+In strict mode (`strict_mode: true`), stale pins produce **errors**
+instead of warnings — useful for CI pipelines where freshness is
+mandatory.
+
+## Secret Scanning
+
+Forjar scans all config values for plaintext secrets using 15 regex
+patterns (AWS keys, PEM headers, JWT tokens, etc.). Sensitive values
+must use age encryption:
+
+```yaml
+# BAD — plaintext secret detected
+params:
+  db_password: "supersecret123"
+
+# GOOD — age-encrypted
+params:
+  db_password: "ENC[age,encrypted-value-here]"
+```
+
+Secret scanning runs automatically during `forjar apply` and
+`forjar validate`. See `cargo run --example store_secret_scan`.
+
 ## Running the Series
 
 ```bash
