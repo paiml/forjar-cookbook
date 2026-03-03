@@ -1,0 +1,47 @@
+recipe:
+  name: child-app-config
+  description: "Writes application configuration files"
+  inputs:
+    app_name:
+      type: string
+      description: "Application name"
+    app_port:
+      type: string
+      description: "Application listen port"
+      default: "8080"
+    config_dir:
+      type: string
+      description: "Configuration directory root"
+      default: /etc/forjar-apps
+
+resources:
+  app-conf:
+    type: file
+    path: "{{inputs.config_dir}}/{{inputs.app_name}}/app.conf"
+    owner: root
+    mode: '0644'
+    content: |
+      # Managed by forjar — {{inputs.app_name}} configuration
+      [server]
+      port = {{inputs.app_port}}
+      bind = 0.0.0.0
+      workers = 4
+
+      [logging]
+      level = info
+      format = json
+    tags: [config, application]
+
+  health-conf:
+    type: file
+    path: "{{inputs.config_dir}}/{{inputs.app_name}}/health.conf"
+    owner: root
+    mode: '0644'
+    content: |
+      # Managed by forjar — health check configuration
+      [health]
+      endpoint = /healthz
+      interval_seconds = 30
+      timeout_seconds = 5
+    depends_on: [app-conf]
+    tags: [config, health]

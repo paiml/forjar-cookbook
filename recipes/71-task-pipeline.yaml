@@ -1,0 +1,175 @@
+# Recipe: 71-task-pipeline
+# Tier: 1+2+3 (validate + container apply)
+# Idempotency: strong (completion_check + output_artifacts)
+# Budget: first_apply < 30s, idempotent < 2s
+#
+# Task resource type coverage: arbitrary command execution with
+# completion checks, timeouts, output artifact tracking, and working
+# directory support. Demonstrates a multi-stage build pipeline.
+# Refs: GH-4
+
+version: '1.0'
+name: task-pipeline
+description: "Task resource type: command execution with completion_check, timeout, and output_artifacts"
+
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
+params:
+  workspace: /opt/pipeline
+  artifact_dir: /opt/pipeline/artifacts
+
+machines:
+  pipeline-host:
+    hostname: pipeline-host
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-71-task
+      ephemeral: false
+      privileged: false
+      init: true
+
+resources:
+  # --- Workspace directories ---
+  workspace-dir:
+    type: file
+    machine: pipeline-host
+    path: "{{params.workspace}}"
+    state: directory
+    owner: root
+    mode: '0755'
+    tags: [task, prereq]
+    resource_group: pipeline-infra
+
+  artifact-dir:
+    type: file
+    machine: pipeline-host
+    path: "{{params.artifact_dir}}"
+    state: directory
+    owner: root
+    mode: '0755'
+    depends_on: [workspace-dir]
+    tags: [task, prereq]
+    resource_group: pipeline-infra
+
+  # --- Stage 1: Generate source (basic command) ---
+  generate-source:
+    type: task
+    machine: pipeline-host
+    command: |
+      mkdir -p src
+      cat > src/main.c <<'CSRC'
+      #include <stdio.h>
+      int main() { printf("forjar pipeline OK\n"); return 0; }
+      CSRC
+      echo "Source generated"
+    working_dir: "{{params.workspace}}"
+    completion_check: "test -f {{params.workspace}}/src/main.c"
+    output_artifacts:
+      - "{{params.workspace}}/src/main.c"
+    depends_on: [workspace-dir]
+    tags: [task, generate, stage-1]
+    resource_group: pipeline
+
+  # --- Stage 2: Compile with timeout ---
+  compile:
+    type: task
+    machine: pipeline-host
+    command: |
+      gcc -o artifacts/pipeline-bin src/main.c -Wall -Wextra
+      echo "Compilation succeeded"
+    working_dir: "{{params.workspace}}"
+    timeout: 120
+    completion_check: "test -x {{params.artifact_dir}}/pipeline-bin"
+    output_artifacts:
+      - "{{params.artifact_dir}}/pipeline-bin"
+    depends_on: [generate-source, artifact-dir]
+    tags: [task, compile, stage-2]
+    resource_group: pipeline
+
+  # --- Stage 3: Test with timeout ---
+  run-tests:
+    type: task
+    machine: pipeline-host
+    command: |
+      OUTPUT=$(./artifacts/pipeline-bin)
+      if [ "$OUTPUT" = "forjar pipeline OK" ]; then
+        echo "PASS" > artifacts/test-result.txt
+      else
+        echo "FAIL: unexpected output: $OUTPUT" > artifacts/test-result.txt
+        exit 1
+      fi
+    working_dir: "{{params.workspace}}"
+    timeout: 60
+    completion_check: "grep -q PASS {{params.artifact_dir}}/test-result.txt 2>/dev/null"
+    output_artifacts:
+      - "{{params.artifact_dir}}/test-result.txt"
+    depends_on: [compile]
+    tags: [task, test, stage-3]
+    resource_group: pipeline
+
+  # --- Stage 4: Package artifacts (no timeout, no completion_check) ---
+  package:
+    type: task
+    machine: pipeline-host
+    command: |
+      cd artifacts
+      tar czf pipeline-release.tar.gz pipeline-bin test-result.txt
+      b3sum pipeline-release.tar.gz > pipeline-release.tar.gz.b3 2>/dev/null || sha256sum pipeline-release.tar.gz > pipeline-release.tar.gz.sha256
+      echo "Package created"
+    working_dir: "{{params.workspace}}"
+    output_artifacts:
+      - "{{params.artifact_dir}}/pipeline-release.tar.gz"
+    depends_on: [run-tests]
+    tags: [task, package, stage-4]
+    resource_group: pipeline
+
+  # --- Pipeline status script ---
+  pipeline-status:
+    type: file
+    machine: pipeline-host
+    path: /usr/local/bin/forjar-pipeline-status.sh
+    owner: root
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      DIR="{{params.artifact_dir}}"
+      echo "=== Pipeline Status ==="
+      for F in pipeline-bin test-result.txt pipeline-release.tar.gz; do
+        if [ -f "$DIR/$F" ]; then
+          echo "  OK: $F ($(stat -c%s "$DIR/$F") bytes)"
+        else
+          echo "  MISSING: $F"
+        fi
+      done
+    depends_on: [package]
+    tags: [task, tooling]
+    resource_group: pipeline-infra
+
+policy:
+  failure: continue_independent
+  parallel_machines: false
+  tripwire: true
+  lock_file: true
+  ssh_retries: 3
+  pre_apply: "echo 'Running build pipeline'"
+  post_apply: "echo 'Build pipeline completed'"
+  notify:
+    on_success: "echo 'Pipeline succeeded — artifacts ready'"
+    on_failure: "echo 'Pipeline failed — check stage outputs'"
+    on_drift: "echo 'Pipeline artifact drift detected'"
+
+outputs:
+  workspace:
+    value: "{{params.workspace}}"
+    description: "Pipeline workspace directory"
+  artifact_dir:
+    value: "{{params.artifact_dir}}"
+    description: "Pipeline artifact output directory"

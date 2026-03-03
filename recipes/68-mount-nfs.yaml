@@ -1,0 +1,156 @@
+# Recipe: 68-mount-nfs
+# Tier: 1+2 (validate + container plan; mount requires privileged or bare-metal)
+# Idempotency: strong (mountpoint check + fstab dedup)
+# Budget: first_apply < 10s, idempotent < 1s
+#
+# Mount resource type coverage: NFS mount, bind mount, tmpfs.
+# Demonstrates state: mounted, unmounted, absent with fstab persistence.
+# Refs: GH-1
+
+version: '1.0'
+name: mount-nfs
+description: "Mount resource type: NFS share, bind mount, and tmpfs with fstab persistence"
+
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
+params:
+  nfs_server: "192.168.1.10"
+  nfs_export: "/exports/data"
+  nfs_mount: "/mnt/nfs-data"
+  nfs_options: "ro,hard,intr,timeo=30"
+  bind_source: "/opt/build-cache"
+  bind_target: "/mnt/build-cache"
+  tmpfs_mount: "/mnt/scratch"
+  tmpfs_size: "512m"
+  old_mount: "/mnt/deprecated"
+
+machines:
+  mount-host:
+    hostname: mount-host
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-68-mount
+      ephemeral: false
+      privileged: false
+      init: true
+
+resources:
+  # --- NFS mount: remote file share ---
+  nfs-data:
+    type: mount
+    machine: mount-host
+    source: "{{params.nfs_server}}:{{params.nfs_export}}"
+    path: "{{params.nfs_mount}}"
+    fs_type: nfs4
+    options: "{{params.nfs_options}}"
+    state: mounted
+    tags: [mount, nfs, storage]
+    resource_group: mounts
+
+  # --- Bind mount: local directory alias ---
+  build-cache-dir:
+    type: file
+    machine: mount-host
+    path: "{{params.bind_source}}"
+    state: directory
+    owner: root
+    mode: '0755'
+    tags: [mount, bind, prereq]
+    resource_group: mounts
+
+  bind-cache:
+    type: mount
+    machine: mount-host
+    source: "{{params.bind_source}}"
+    path: "{{params.bind_target}}"
+    fs_type: bind
+    options: defaults
+    state: mounted
+    depends_on: [build-cache-dir]
+    tags: [mount, bind, storage]
+    resource_group: mounts
+
+  # --- Tmpfs: volatile scratch space ---
+  tmpfs-scratch:
+    type: mount
+    machine: mount-host
+    source: tmpfs
+    path: "{{params.tmpfs_mount}}"
+    fs_type: tmpfs
+    options: "size={{params.tmpfs_size}},mode=1777"
+    state: mounted
+    tags: [mount, tmpfs, volatile]
+    resource_group: mounts
+
+  # --- Absent: remove deprecated mount ---
+  remove-deprecated:
+    type: mount
+    machine: mount-host
+    source: "none"
+    path: "{{params.old_mount}}"
+    state: absent
+    tags: [mount, cleanup]
+    resource_group: mounts
+
+  # --- Monitoring script for mount health ---
+  mount-health-check:
+    type: file
+    machine: mount-host
+    path: /usr/local/bin/forjar-mount-health.sh
+    owner: root
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      MOUNTS=("{{params.nfs_mount}}" "{{params.bind_target}}" "{{params.tmpfs_mount}}")
+      for MP in "${MOUNTS[@]}"; do
+        if mountpoint -q "$MP" 2>/dev/null; then
+          echo "OK: $MP"
+        else
+          echo "FAIL: $MP"
+        fi
+      done
+    depends_on: [nfs-data, bind-cache, tmpfs-scratch]
+    tags: [mount, monitoring]
+    resource_group: mounts
+
+  mount-health-cron:
+    type: cron
+    machine: mount-host
+    schedule: "*/5 * * * *"
+    command: "/usr/local/bin/forjar-mount-health.sh >> /var/log/forjar-mount-health.log 2>&1"
+    name: forjar-mount-health
+    depends_on: [mount-health-check]
+    tags: [mount, monitoring, cron]
+    resource_group: mounts
+
+policy:
+  failure: continue_independent
+  parallel_machines: false
+  tripwire: true
+  lock_file: true
+  ssh_retries: 3
+  pre_apply: "echo 'Configuring mount points'"
+  post_apply: "echo 'Mount points configured'"
+  notify:
+    on_success: "echo 'Mount configuration applied successfully'"
+    on_failure: "echo 'Mount configuration failed — check permissions and NFS server'"
+    on_drift: "echo 'Mount configuration drift detected'"
+
+outputs:
+  nfs_mount:
+    value: "{{params.nfs_mount}}"
+    description: "NFS mount point"
+  bind_mount:
+    value: "{{params.bind_target}}"
+    description: "Bind mount point"
+  tmpfs_mount:
+    value: "{{params.tmpfs_mount}}"
+    description: "Tmpfs scratch mount point"

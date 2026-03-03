@@ -1,0 +1,40 @@
+recipe:
+  name: child-app-scaffold
+  description: "Creates directory structure for an application"
+  inputs:
+    app_name:
+      type: string
+      description: "Application name"
+    config_dir:
+      type: string
+      description: "Configuration directory root"
+      default: /etc/forjar-apps
+    log_dir:
+      type: string
+      description: "Log directory root"
+      default: /var/log/forjar-apps
+
+resources:
+  config-dir:
+    type: file
+    path: "{{inputs.config_dir}}/{{inputs.app_name}}"
+    state: directory
+    owner: root
+    mode: '0755'
+    tags: [scaffold, directory]
+
+  log-dir:
+    type: file
+    path: "{{inputs.log_dir}}/{{inputs.app_name}}"
+    state: directory
+    owner: root
+    mode: '0755'
+    tags: [scaffold, directory]
+
+  run-dir:
+    type: file
+    path: "/var/run/{{inputs.app_name}}"
+    state: directory
+    owner: root
+    mode: '0755'
+    tags: [scaffold, directory]

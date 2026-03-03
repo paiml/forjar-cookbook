@@ -1,0 +1,155 @@
+# Recipe: 70-model-download
+# Tier: 1+2 (validate + container plan; model download needs network)
+# Idempotency: strong (BLAKE3 checksum verification)
+# Budget: first_apply < 60s, idempotent < 2s
+#
+# Model resource type coverage: ML model download from HTTP, local copy,
+# and HuggingFace repo ID. BLAKE3 integrity verification and cache management.
+# Refs: GH-3
+
+version: '1.0'
+name: model-download
+description: "Model resource type: HTTP download, local copy, HuggingFace with BLAKE3 verification"
+
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
+params:
+  model_dir: /opt/models
+  cache_dir: /var/cache/apr
+  tiny_model_url: "https://huggingface.co/karpathy/tinyllamas/resolve/main/stories15M.pt"
+  tiny_model_checksum: ""
+  local_model_src: /opt/models/pretrained/custom-v1.bin
+  hf_repo_id: "TheBloke/TinyLlama-1.1B-GGUF"
+  retired_model: /opt/models/deprecated-v0.bin
+
+machines:
+  ml-host:
+    hostname: ml-host
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-70-model
+      ephemeral: false
+      privileged: false
+      init: true
+
+resources:
+  # --- Prerequisites: directories ---
+  model-dir:
+    type: file
+    machine: ml-host
+    path: "{{params.model_dir}}"
+    state: directory
+    owner: root
+    mode: '0755'
+    tags: [model, prereq]
+    resource_group: model-infra
+
+  cache-dir:
+    type: file
+    machine: ml-host
+    path: "{{params.cache_dir}}"
+    state: directory
+    owner: root
+    mode: '0755'
+    tags: [model, prereq, cache]
+    resource_group: model-infra
+
+  # --- Model from HTTP URL with BLAKE3 checksum ---
+  tiny-model-http:
+    type: model
+    machine: ml-host
+    name: stories15m
+    path: "{{params.model_dir}}/stories15M.pt"
+    source: "{{params.tiny_model_url}}"
+    cache_dir: "{{params.cache_dir}}"
+    state: present
+    depends_on: [model-dir, cache-dir]
+    tags: [model, http, download]
+    resource_group: models
+
+  # --- Model from local path (copy) ---
+  custom-model-local:
+    type: model
+    machine: ml-host
+    name: custom-v1
+    path: "{{params.model_dir}}/custom-v1.bin"
+    source: "{{params.local_model_src}}"
+    state: present
+    depends_on: [model-dir]
+    tags: [model, local, copy]
+    resource_group: models
+
+  # --- Model from HuggingFace repo ID ---
+  tinyllama-hf:
+    type: model
+    machine: ml-host
+    name: tinyllama-gguf
+    path: "{{params.model_dir}}/tinyllama-1.1b.gguf"
+    source: "{{params.hf_repo_id}}"
+    cache_dir: "{{params.cache_dir}}"
+    state: present
+    depends_on: [model-dir, cache-dir]
+    tags: [model, huggingface, gguf]
+    resource_group: models
+
+  # --- Remove deprecated model ---
+  remove-deprecated:
+    type: model
+    machine: ml-host
+    name: deprecated-v0
+    path: "{{params.retired_model}}"
+    state: absent
+    tags: [model, cleanup]
+    resource_group: models
+
+  # --- Model inventory script ---
+  model-inventory:
+    type: file
+    machine: ml-host
+    path: /usr/local/bin/forjar-model-inventory.sh
+    owner: root
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      MODEL_DIR="{{params.model_dir}}"
+      echo "=== Model Inventory ==="
+      for f in "$MODEL_DIR"/*; do
+        [ -f "$f" ] || continue
+        SIZE=$(stat -c%s "$f" 2>/dev/null || echo "?")
+        HASH=$(b3sum "$f" 2>/dev/null | cut -d' ' -f1 || echo "no-b3sum")
+        echo "  $(basename "$f"): ${SIZE} bytes, blake3:${HASH:0:16}..."
+      done
+      echo "=== Cache: {{params.cache_dir}} ==="
+      du -sh "{{params.cache_dir}}" 2>/dev/null || echo "  (empty)"
+    depends_on: [tiny-model-http, custom-model-local, tinyllama-hf]
+    tags: [model, tooling, inventory]
+    resource_group: model-infra
+
+policy:
+  failure: continue_independent
+  parallel_machines: false
+  tripwire: true
+  lock_file: true
+  ssh_retries: 3
+  pre_apply: "echo 'Managing ML model artifacts'"
+  post_apply: "echo 'Model artifacts configured'"
+  notify:
+    on_success: "echo 'Model download and verification completed'"
+    on_failure: "echo 'Model management failed — check network and disk space'"
+    on_drift: "echo 'Model integrity drift detected — re-verify checksums'"
+
+outputs:
+  model_dir:
+    value: "{{params.model_dir}}"
+    description: "Model storage directory"
+  cache_dir:
+    value: "{{params.cache_dir}}"
+    description: "Model cache directory"

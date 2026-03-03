@@ -1,0 +1,172 @@
+# Recipe: 69-pepita-sandbox
+# Tier: 1+2 (validate + plan; pepita requires bare-metal Linux kernel)
+# Idempotency: strong (cgroup/namespace checks)
+# Budget: first_apply < 15s, idempotent < 1s
+#
+# Pepita resource type coverage: kernel namespace isolation without
+# container runtimes. Demonstrates cgroups v2, overlayfs, network
+# namespace, and cpuset affinity.
+# Refs: GH-2
+
+version: '1.0'
+name: pepita-sandbox
+description: "Pepita kernel namespace isolation: cgroups, overlayfs, netns, cpuset"
+
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
+params:
+  sandbox_name: build-sandbox
+  cpuset: "0-3"
+  overlay_base: /var/lib/forjar/pepita
+  rootfs: /var/lib/forjar/rootfs/jammy
+  build_user: builder
+
+machines:
+  sandbox-host:
+    hostname: sandbox-host
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-69-pepita
+      ephemeral: false
+      privileged: false
+      init: true
+
+resources:
+  # --- Overlay filesystem directories ---
+  overlay-lower:
+    type: file
+    machine: sandbox-host
+    path: "{{params.overlay_base}}/{{params.sandbox_name}}/lower"
+    state: directory
+    owner: root
+    mode: '0755'
+    tags: [pepita, overlayfs, prereq]
+    resource_group: pepita-sandbox
+
+  overlay-upper:
+    type: file
+    machine: sandbox-host
+    path: "{{params.overlay_base}}/{{params.sandbox_name}}/upper"
+    state: directory
+    owner: root
+    mode: '0755'
+    depends_on: [overlay-lower]
+    tags: [pepita, overlayfs, prereq]
+    resource_group: pepita-sandbox
+
+  overlay-work:
+    type: file
+    machine: sandbox-host
+    path: "{{params.overlay_base}}/{{params.sandbox_name}}/work"
+    state: directory
+    owner: root
+    mode: '0755'
+    depends_on: [overlay-upper]
+    tags: [pepita, overlayfs, prereq]
+    resource_group: pepita-sandbox
+
+  overlay-merged:
+    type: file
+    machine: sandbox-host
+    path: "{{params.overlay_base}}/{{params.sandbox_name}}/merged"
+    state: directory
+    owner: root
+    mode: '0755'
+    depends_on: [overlay-work]
+    tags: [pepita, overlayfs, prereq]
+    resource_group: pepita-sandbox
+
+  # --- Primary pepita isolation environment ---
+  build-isolation:
+    type: pepita
+    machine: sandbox-host
+    name: "{{params.sandbox_name}}"
+    state: present
+    chroot_dir: "{{params.rootfs}}"
+    overlay_lower: "{{params.overlay_base}}/{{params.sandbox_name}}/lower"
+    overlay_upper: "{{params.overlay_base}}/{{params.sandbox_name}}/upper"
+    overlay_merged: "{{params.overlay_base}}/{{params.sandbox_name}}/merged"
+    memory_limit: 2048
+    cpuset: "{{params.cpuset}}"
+    netns: true
+    depends_on: [overlay-merged]
+    tags: [pepita, isolation, cgroups, netns]
+    resource_group: pepita-sandbox
+
+  # --- Minimal pepita (cgroups only, no overlay) ---
+  compile-cgroup:
+    type: pepita
+    machine: sandbox-host
+    name: compile-worker
+    state: present
+    memory_limit: 4096
+    cpuset: "0-1"
+    netns: false
+    tags: [pepita, cgroups, minimal]
+    resource_group: pepita-workers
+
+  # --- Teardown: remove a retired sandbox ---
+  retired-sandbox:
+    type: pepita
+    machine: sandbox-host
+    name: old-sandbox
+    state: absent
+    tags: [pepita, cleanup]
+    resource_group: pepita-cleanup
+
+  # --- Sandbox entry script ---
+  sandbox-entry:
+    type: file
+    machine: sandbox-host
+    path: /usr/local/bin/forjar-sandbox-enter.sh
+    owner: root
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      SANDBOX="{{params.sandbox_name}}"
+      MERGED="{{params.overlay_base}}/$SANDBOX/merged"
+      echo "Entering pepita sandbox: $SANDBOX"
+      echo "  Memory limit: 2048MB"
+      echo "  CPUs: {{params.cpuset}}"
+      echo "  Overlay: $MERGED"
+      if [ -d "/sys/fs/cgroup/forjar-$SANDBOX" ]; then
+        echo "  Cgroup: active"
+        cat "/sys/fs/cgroup/forjar-$SANDBOX/memory.max" 2>/dev/null || true
+      else
+        echo "  Cgroup: not found"
+      fi
+    depends_on: [build-isolation]
+    tags: [pepita, tooling]
+    resource_group: pepita-sandbox
+
+policy:
+  failure: continue_independent
+  parallel_machines: false
+  tripwire: true
+  lock_file: true
+  ssh_retries: 3
+  pre_apply: "echo 'Configuring pepita sandbox environments'"
+  post_apply: "echo 'Pepita sandboxes configured'"
+  notify:
+    on_success: "echo 'Pepita sandbox setup completed'"
+    on_failure: "echo 'Pepita sandbox setup failed — check kernel support'"
+    on_drift: "echo 'Pepita sandbox drift detected'"
+
+outputs:
+  sandbox_name:
+    value: "{{params.sandbox_name}}"
+    description: "Primary sandbox name"
+  overlay_merged:
+    value: "{{params.overlay_base}}/{{params.sandbox_name}}/merged"
+    description: "Overlay merged directory"
+  memory_limit:
+    value: "2048MB"
+    description: "Cgroup memory limit"

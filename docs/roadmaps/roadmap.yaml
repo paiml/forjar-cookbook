@@ -1,0 +1,84 @@
+roadmap_version: '1.0'
+github_enabled: true
+github_repo: null
+roadmap:
+- id: GH-1
+  github_issue: 1
+  item_type: task
+  title: 'Issue #1'
+  status: inprogress
+  priority: medium
+  assigned_to: null
+  created: 2026-03-03T15:38:53.849026528+00:00
+  updated: 2026-03-03T15:38:53.849026528+00:00
+  spec: null
+  acceptance_criteria: []
+  phases: []
+  subtasks: []
+  estimated_effort: null
+  labels: []
+  notes: null
+- id: GH-2
+  github_issue: 2
+  item_type: task
+  title: 'Issue #2'
+  status: inprogress
+  priority: medium
+  assigned_to: null
+  created: 2026-03-03T15:45:38.143118395+00:00
+  updated: 2026-03-03T15:45:38.143118395+00:00
+  spec: null
+  acceptance_criteria: []
+  phases: []
+  subtasks: []
+  estimated_effort: null
+  labels: []
+  notes: null
+- id: GH-3
+  github_issue: 3
+  item_type: task
+  title: 'Issue #3'
+  status: inprogress
+  priority: medium
+  assigned_to: null
+  created: 2026-03-03T15:45:41.827522142+00:00
+  updated: 2026-03-03T15:45:41.827522142+00:00
+  spec: null
+  acceptance_criteria: []
+  phases: []
+  subtasks: []
+  estimated_effort: null
+  labels: []
+  notes: null
+- id: GH-4
+  github_issue: 4
+  item_type: task
+  title: 'Issue #4'
+  status: inprogress
+  priority: medium
+  assigned_to: null
+  created: 2026-03-03T15:45:42.145132317+00:00
+  updated: 2026-03-03T15:45:42.145132317+00:00
+  spec: null
+  acceptance_criteria: []
+  phases: []
+  subtasks: []
+  estimated_effort: null
+  labels: []
+  notes: null
+- id: GH-5
+  github_issue: 5
+  item_type: task
+  title: 'Issue #5'
+  status: inprogress
+  priority: medium
+  assigned_to: null
+  created: 2026-03-03T15:45:42.461456454+00:00
+  updated: 2026-03-03T15:45:42.461456454+00:00
+  spec: null
+  acceptance_criteria: []
+  phases: []
+  subtasks: []
+  estimated_effort: null
+  labels: []
+  notes: null

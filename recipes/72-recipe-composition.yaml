@@ -1,0 +1,107 @@
+# Recipe: 72-recipe-composition
+# Tier: 1+2 (validate + container plan; tests recipe expansion)
+# Idempotency: strong (file content convergence)
+# Budget: first_apply < 15s, idempotent < 1s
+#
+# Recipe resource type coverage: nested recipe composition with input
+# forwarding and namespace isolation. Demonstrates type: recipe to compose
+# reusable sub-recipes into a larger configuration.
+# Refs: GH-5
+
+version: '1.0'
+name: recipe-composition
+description: "Recipe resource type: nested composition with input forwarding and namespace isolation"
+
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
+params:
+  app_name: myapp
+  app_user: appuser
+  app_port: "8080"
+  config_dir: /etc/forjar-apps
+  log_dir: /var/log/forjar-apps
+
+machines:
+  target:
+    hostname: target
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-72-recipe
+      ephemeral: false
+      privileged: false
+      init: true
+
+resources:
+  # --- Compose child recipe: app-scaffold ---
+  # type: recipe references a child recipe YAML and forwards inputs.
+  # forjar expands this into namespaced resources (app-scaffold/config-dir, etc.)
+  app-scaffold:
+    type: recipe
+    machine: target
+    recipe: 72-child-app-scaffold
+    inputs:
+      app_name: "{{params.app_name}}"
+      config_dir: "{{params.config_dir}}"
+      log_dir: "{{params.log_dir}}"
+    tags: [recipe, composition, scaffold]
+    resource_group: composition
+
+  # --- Compose child recipe: app-config ---
+  # Second child recipe, depends on scaffold being applied first
+  app-config:
+    type: recipe
+    machine: target
+    recipe: 72-child-app-config
+    inputs:
+      app_name: "{{params.app_name}}"
+      app_port: "{{params.app_port}}"
+      config_dir: "{{params.config_dir}}"
+    depends_on: [app-scaffold]
+    tags: [recipe, composition, config]
+    resource_group: composition
+
+  # --- Top-level resource alongside composed recipes ---
+  composition-manifest:
+    type: file
+    machine: target
+    path: "{{params.config_dir}}/composition-manifest.txt"
+    owner: root
+    mode: '0644'
+    content: |
+      # Managed by forjar — recipe composition manifest
+      app: {{params.app_name}}
+      port: {{params.app_port}}
+      composed_from:
+        - 72-child-app-scaffold.yaml
+        - 72-child-app-config.yaml
+      generated_by: forjar-cookbook recipe 72
+    tags: [recipe, composition, manifest]
+    resource_group: composition
+
+policy:
+  failure: continue_independent
+  parallel_machines: false
+  tripwire: true
+  lock_file: true
+  ssh_retries: 3
+  pre_apply: "echo 'Applying composed recipe stack'"
+  post_apply: "echo 'Recipe composition applied'"
+  notify:
+    on_success: "echo 'Recipe composition completed successfully'"
+    on_failure: "echo 'Recipe composition failed — check child recipes'"
+    on_drift: "echo 'Recipe composition drift detected'"
+
+outputs:
+  app_name:
+    value: "{{params.app_name}}"
+    description: "Application name"
+  config_dir:
+    value: "{{params.config_dir}}"
+    description: "Application config directory"
