@@ -185,6 +185,26 @@ params:
 Secret scanning runs automatically during `forjar apply` and
 `forjar validate`. See `cargo run --example store_secret_scan`.
 
+## Performance Benchmarks
+
+The store subsystem is benchmarked via Criterion.rs. Key operations and
+their measured throughputs:
+
+| Operation | Input | Throughput |
+|-----------|-------|------------|
+| `store_path_hash` | BLAKE3 composite | < 1 µs |
+| `purity_classify` | 4-level classification | < 1 µs |
+| `closure_hash` | Transitive dep closure | < 5 µs |
+| `repro_score` | Full scoring + grading | < 10 µs |
+| `far_encode` | FAR binary encoding | < 50 µs |
+| `secret_scan` | 15-pattern regex | < 100 µs |
+| `bash_validate` | bashrs I8 validation | < 200 µs |
+
+Run benchmarks: `cargo bench --bench store_bench`
+
+See `cargo run --example store_benchmarks` for a demo of all 10
+benchmark operations with synthetic data.
+
 ## Running the Series
 
 ```bash
