@@ -1,0 +1,104 @@
+# Recipe: 80-fault-injection-gate
+# Tier: 1+2 (validate + container plan; fault injection testing)
+# Idempotency: strong (file content convergence)
+# Budget: first_apply < 15s, idempotent < 1s
+#
+# Pre-deploy fault injection: simulates network timeouts, disk-full,
+# permission denied, and dependency cascade failures to verify resilience.
+# Refs: GH-5
+
+version: '1.0'
+name: fault-injection-gate
+description: "Pre-deploy resilience gate — fault injection testing for all resources"
+
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
+params:
+  config_path: /etc/forjar/resilience.yaml
+
+machines:
+  target:
+    hostname: target
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-80-fault-inject
+      ephemeral: false
+      privileged: false
+      init: true
+
+policy:
+  failure: stop_on_first
+  parallel_machines: false
+  tripwire: true
+  lock_file: true
+  ssh_retries: 3
+  pre_apply: "echo 'Running pre-deploy resilience checks'"
+  post_apply: "echo 'Resilience checks completed'"
+  notify:
+    on_success: "echo 'Fault injection gate passed'"
+    on_failure: "echo 'Fault injection gate FAILED — deploy blocked'"
+    on_drift: "echo 'Resilience config drift detected'"
+
+outputs:
+  resilience_status:
+    value: "gate-passed"
+
+resources:
+  sample-config:
+    type: file
+    machine: target
+    path: "{{params.config_path}}"
+    content: |
+      version: "1.0"
+      name: resilience-demo
+      machines:
+        app:
+          hostname: app
+          addr: 10.0.0.1
+      resources:
+        base-pkg:
+          type: package
+          machine: app
+          provider: apt
+          packages: [curl]
+        app-dir:
+          type: file
+          machine: app
+          path: /opt/app
+          state: directory
+          depends_on: [base-pkg]
+        app-conf:
+          type: file
+          machine: app
+          path: /opt/app/config.yaml
+          content: "env: production"
+          depends_on: [app-dir]
+
+  # Run fault injection — simulates 5 fault categories
+  fault-test:
+    type: task
+    machine: target
+    command: "forjar fault-inject -f {{params.config_path}} --json"
+    depends_on: [sample-config]
+
+  # Also run invariant monitors
+  invariant-check:
+    type: task
+    machine: target
+    command: "forjar invariants -f {{params.config_path}} --json"
+    depends_on: [sample-config]
+
+  # Cost estimation — verify deployment budget
+  cost-check:
+    type: task
+    machine: target
+    command: "forjar cost-estimate -f {{params.config_path}} --json"
+    depends_on: [sample-config]
+    check: "forjar cost-estimate -f {{params.config_path}} --json | grep -q 'est_seconds'"

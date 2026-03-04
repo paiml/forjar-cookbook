@@ -1,0 +1,134 @@
+# Recipe: 81-security-hardening
+# Tier: 1+2 (validate + container plan; security analysis pipeline)
+# Idempotency: strong (file content convergence)
+# Budget: first_apply < 15s, idempotent < 1s
+#
+# Security hardening pipeline: runs security scan, privilege analysis,
+# SBOM generation, and CBOM (cryptographic BOM) for compliance auditing.
+# Refs: GH-5
+
+version: '1.0'
+name: security-hardening
+description: "Security analysis pipeline — scan, privilege audit, SBOM, CBOM"
+
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
+params:
+  config_path: /etc/forjar/secure-app.yaml
+  state_dir: /var/lib/forjar/state
+  sbom_output: /var/lib/forjar/sbom.json
+  cbom_output: /var/lib/forjar/cbom.json
+
+machines:
+  target:
+    hostname: target
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-81-security
+      ephemeral: false
+      privileged: false
+      init: true
+
+policy:
+  failure: stop_on_first
+  parallel_machines: false
+  tripwire: true
+  lock_file: true
+  ssh_retries: 3
+  pre_apply: "echo 'Running security analysis pipeline'"
+  post_apply: "echo 'Security analysis completed'"
+  notify:
+    on_success: "echo 'Security hardening checks passed'"
+    on_failure: "echo 'Security hardening FAILED'"
+    on_drift: "echo 'Security configuration drift detected'"
+
+outputs:
+  scan_status:
+    value: "no-critical-findings"
+
+resources:
+  state-dir:
+    type: file
+    machine: target
+    path: "{{params.state_dir}}"
+    state: directory
+
+  sample-config:
+    type: file
+    machine: target
+    path: "{{params.config_path}}"
+    content: |
+      version: "1.0"
+      name: secure-app
+      machines:
+        web:
+          hostname: web
+          addr: 10.0.0.1
+      resources:
+        nginx:
+          type: package
+          machine: web
+          provider: apt
+          packages: [nginx]
+        tls-cert:
+          type: file
+          machine: web
+          path: /etc/ssl/certs/app.pem
+          content: "PLACEHOLDER"
+          mode: "0600"
+          depends_on: [nginx]
+        site-conf:
+          type: file
+          machine: web
+          path: /etc/nginx/sites-enabled/app.conf
+          content: "server { listen 443 ssl; }"
+          mode: "0644"
+          depends_on: [tls-cert]
+        nginx-svc:
+          type: service
+          machine: web
+          name: nginx
+          depends_on: [site-conf]
+
+  # Static security scan — find misconfigurations
+  security-scan:
+    type: task
+    machine: target
+    command: "forjar security-scan -f {{params.config_path}} --json"
+    depends_on: [sample-config]
+
+  # Privilege analysis — least-privilege report
+  privilege-audit:
+    type: task
+    machine: target
+    command: "forjar privilege-analysis -f {{params.config_path}} --json"
+    depends_on: [sample-config]
+
+  # Generate SBOM (Software Bill of Materials)
+  sbom:
+    type: task
+    machine: target
+    command: "forjar sbom -f {{params.config_path}} -s {{params.state_dir}} --json"
+    depends_on: [sample-config, state-dir]
+
+  # Generate CBOM (Cryptographic Bill of Materials)
+  cbom:
+    type: task
+    machine: target
+    command: "forjar cbom -f {{params.config_path}} --json"
+    depends_on: [sample-config]
+
+  # Verify no critical security findings
+  scan-gate:
+    type: task
+    machine: target
+    command: "echo 'Security gate check'"
+    depends_on: [security-scan]
+    check: "forjar security-scan -f {{params.config_path}} --json | grep -vq '\"critical\"'"

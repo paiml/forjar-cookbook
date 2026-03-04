@@ -1,0 +1,152 @@
+# Recipe: 82-mlops-pipeline
+# Tier: 1+2 (validate + container plan; MLOps lifecycle management)
+# Idempotency: strong (file content convergence)
+# Budget: first_apply < 15s, idempotent < 1s
+#
+# MLOps pipeline recipe: model card generation, data freshness checks,
+# data validation, checkpoint management, dataset lineage, and
+# reproducibility proofs — full ML lifecycle coverage.
+# Refs: GH-5
+
+version: '1.0'
+name: mlops-pipeline
+description: "MLOps lifecycle — model card, data freshness, validation, checkpoint, lineage"
+
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
+params:
+  config_path: /etc/forjar/ml-stack.yaml
+  state_dir: /var/lib/forjar/state
+  model_name: resnet50
+  dataset_name: imagenet-1k
+  checkpoint_dir: /var/lib/ml/checkpoints
+
+machines:
+  target:
+    hostname: target
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-82-mlops
+      ephemeral: false
+      privileged: false
+      init: true
+
+policy:
+  failure: continue_independent
+  parallel_machines: false
+  tripwire: true
+  lock_file: true
+  ssh_retries: 3
+  pre_apply: "echo 'Running MLOps lifecycle checks for {{params.model_name}}'"
+  post_apply: "echo 'MLOps pipeline completed for {{params.model_name}}'"
+  notify:
+    on_success: "echo 'MLOps pipeline passed for {{params.model_name}}'"
+    on_failure: "echo 'MLOps pipeline FAILED for {{params.model_name}}'"
+    on_drift: "echo 'ML infrastructure drift detected for {{params.model_name}}'"
+
+outputs:
+  model_name:
+    value: "{{params.model_name}}"
+  dataset_name:
+    value: "{{params.dataset_name}}"
+
+resources:
+  state-dir:
+    type: file
+    machine: target
+    path: "{{params.state_dir}}"
+    state: directory
+
+  checkpoint-dir:
+    type: file
+    machine: target
+    path: "{{params.checkpoint_dir}}"
+    state: directory
+
+  sample-config:
+    type: file
+    machine: target
+    path: "{{params.config_path}}"
+    content: |
+      version: "1.0"
+      name: ml-training-stack
+      machines:
+        gpu-node:
+          hostname: gpu-node
+          addr: 10.0.0.10
+          arch: x86_64
+      resources:
+        cuda-driver:
+          type: package
+          machine: gpu-node
+          provider: apt
+          packages: [nvidia-driver-550]
+          gpu_backend: nvidia
+        model-dir:
+          type: file
+          machine: gpu-node
+          path: /opt/models
+          state: directory
+          depends_on: [cuda-driver]
+        training-script:
+          type: file
+          machine: gpu-node
+          path: /opt/models/train.py
+          content: "import torch; print('training')"
+          depends_on: [model-dir]
+
+  # Generate model card
+  model-card:
+    type: task
+    machine: target
+    command: "forjar model-card -f {{params.config_path}} --json"
+    depends_on: [sample-config]
+
+  # Data freshness monitoring
+  data-freshness:
+    type: task
+    machine: target
+    command: "forjar data-freshness -s {{params.state_dir}} --json"
+    depends_on: [state-dir]
+
+  # Data validation checks
+  data-validate:
+    type: task
+    machine: target
+    command: "forjar data-validate -f {{params.config_path}} --json"
+    depends_on: [sample-config]
+
+  # Checkpoint management
+  checkpoint-list:
+    type: task
+    machine: target
+    command: "forjar checkpoint -s {{params.state_dir}} --json"
+    depends_on: [state-dir, checkpoint-dir]
+
+  # Dataset lineage tracking
+  dataset-lineage:
+    type: task
+    machine: target
+    command: "forjar dataset-lineage -s {{params.state_dir}} --json"
+    depends_on: [state-dir]
+
+  # Reproducibility proof
+  repro-proof:
+    type: task
+    machine: target
+    command: "forjar repro-proof -f {{params.config_path}} -s {{params.state_dir}} --json"
+    depends_on: [sample-config, state-dir]
+
+  # Data sovereignty compliance
+  sovereignty-check:
+    type: task
+    machine: target
+    command: "forjar sovereignty -f {{params.config_path}} --json"
+    depends_on: [sample-config]

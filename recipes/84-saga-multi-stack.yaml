@@ -1,0 +1,149 @@
+# Recipe: 84-saga-multi-stack
+# Tier: 1+2 (validate + container plan; saga-pattern multi-stack deploy)
+# Idempotency: strong (file content convergence)
+# Budget: first_apply < 15s, idempotent < 1s
+#
+# Multi-stack deployment with saga pattern: ordered apply across stacks,
+# state generations for rollback, preservation checks, and stack
+# dependency graph visualization.
+# Refs: GH-5
+
+version: '1.0'
+name: saga-multi-stack
+description: "Saga-pattern multi-stack deploy — ordered apply, generations, rollback"
+
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
+params:
+  db_config: /etc/forjar/db-stack.yaml
+  app_config: /etc/forjar/app-stack.yaml
+  state_dir: /var/lib/forjar/state
+
+machines:
+  target:
+    hostname: target
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-84-saga
+      ephemeral: false
+      privileged: false
+      init: true
+
+policy:
+  failure: stop_on_first
+  parallel_machines: false
+  tripwire: true
+  lock_file: true
+  ssh_retries: 3
+  pre_apply: "echo 'Preparing saga-pattern multi-stack deployment'"
+  post_apply: "echo 'Multi-stack saga completed'"
+  notify:
+    on_success: "echo 'Multi-stack deployment succeeded'"
+    on_failure: "echo 'Multi-stack deployment FAILED — check generations for rollback'"
+    on_drift: "echo 'Multi-stack drift detected'"
+
+outputs:
+  db_stack:
+    value: "{{params.db_config}}"
+  app_stack:
+    value: "{{params.app_config}}"
+
+resources:
+  state-dir:
+    type: file
+    machine: target
+    path: "{{params.state_dir}}"
+    state: directory
+
+  db-config:
+    type: file
+    machine: target
+    path: "{{params.db_config}}"
+    content: |
+      version: "1.0"
+      name: db-stack
+      machines:
+        db:
+          hostname: db
+          addr: 10.0.0.2
+      resources:
+        postgresql:
+          type: package
+          machine: db
+          provider: apt
+          packages: [postgresql-16]
+        pg-conf:
+          type: file
+          machine: db
+          path: /etc/postgresql/16/main/postgresql.conf
+          content: "listen_addresses = '*'"
+          depends_on: [postgresql]
+        pg-service:
+          type: service
+          machine: db
+          name: postgresql
+          depends_on: [pg-conf]
+
+  app-config:
+    type: file
+    machine: target
+    path: "{{params.app_config}}"
+    content: |
+      version: "1.0"
+      name: app-stack
+      machines:
+        app:
+          hostname: app
+          addr: 10.0.0.3
+      resources:
+        runtime:
+          type: package
+          machine: app
+          provider: apt
+          packages: [python3]
+        app-conf:
+          type: file
+          machine: app
+          path: /opt/app/config.yaml
+          content: "db_host: 10.0.0.2"
+          depends_on: [runtime]
+        app-service:
+          type: service
+          machine: app
+          name: app
+          depends_on: [app-conf]
+
+  # Stack dependency graph
+  stack-graph:
+    type: task
+    machine: target
+    command: "forjar stack-graph {{params.db_config}} {{params.app_config}} --json"
+    depends_on: [db-config, app-config]
+
+  # Preservation check — verify no destructive changes
+  preservation:
+    type: task
+    machine: target
+    command: "forjar preservation -f {{params.db_config}} -s {{params.state_dir}} --json"
+    depends_on: [db-config, state-dir]
+
+  # List state generations (for rollback audit)
+  list-generations:
+    type: task
+    machine: target
+    command: "forjar generation list -s {{params.state_dir}} --json"
+    depends_on: [state-dir]
+
+  # Show registry of available recipes
+  registry-list:
+    type: task
+    machine: target
+    command: "forjar registry-list --json"
+    depends_on: [state-dir]

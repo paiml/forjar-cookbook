@@ -1,0 +1,138 @@
+# Recipe: 83-config-merge-extract
+# Tier: 1+2 (validate + container plan; config composition operations)
+# Idempotency: strong (file content convergence)
+# Budget: first_apply < 15s, idempotent < 1s
+#
+# Config composition: merge multiple configs, extract subsets by tag/group,
+# cross-machine dependency analysis, and ISO export for air-gapped deploy.
+# Refs: GH-5
+
+version: '1.0'
+name: config-merge-extract
+description: "Config composition — merge, extract, cross-deps, ISO export"
+
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
+params:
+  base_config: /etc/forjar/base.yaml
+  overlay_config: /etc/forjar/overlay.yaml
+  merged_config: /etc/forjar/merged.yaml
+  iso_output: /var/lib/forjar/export.iso
+
+machines:
+  target:
+    hostname: target
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-83-merge
+      ephemeral: false
+      privileged: false
+      init: true
+
+policy:
+  failure: stop_on_first
+  parallel_machines: false
+  tripwire: true
+  lock_file: true
+  ssh_retries: 3
+  pre_apply: "echo 'Composing config from base + overlay'"
+  post_apply: "echo 'Config composition completed'"
+  notify:
+    on_success: "echo 'Config merge/extract completed successfully'"
+    on_failure: "echo 'Config composition FAILED'"
+    on_drift: "echo 'Composed config drift detected'"
+
+outputs:
+  merged_path:
+    value: "{{params.merged_config}}"
+
+resources:
+  base-config:
+    type: file
+    machine: target
+    path: "{{params.base_config}}"
+    content: |
+      version: "1.0"
+      name: base-infra
+      machines:
+        web:
+          hostname: web
+          addr: 10.0.0.1
+        db:
+          hostname: db
+          addr: 10.0.0.2
+      resources:
+        db-pkg:
+          type: package
+          machine: db
+          provider: apt
+          packages: [postgresql]
+          tags: [database]
+        db-conf:
+          type: file
+          machine: db
+          path: /etc/postgresql/pg_hba.conf
+          content: "host all all 10.0.0.0/24 md5"
+          depends_on: [db-pkg]
+          tags: [database]
+
+  overlay-config:
+    type: file
+    machine: target
+    path: "{{params.overlay_config}}"
+    content: |
+      version: "1.0"
+      name: web-overlay
+      machines:
+        web:
+          hostname: web
+          addr: 10.0.0.1
+      resources:
+        web-pkg:
+          type: package
+          machine: web
+          provider: apt
+          packages: [nginx]
+          tags: [web]
+        web-conf:
+          type: file
+          machine: web
+          path: /etc/nginx/nginx.conf
+          content: "upstream db { server 10.0.0.2:5432; }"
+          depends_on: [web-pkg]
+          tags: [web]
+
+  # Merge base + overlay into unified config
+  merge-configs:
+    type: task
+    machine: target
+    command: "forjar config-merge {{params.base_config}} {{params.overlay_config}} --json"
+    depends_on: [base-config, overlay-config]
+
+  # Extract only database resources by tag
+  extract-db:
+    type: task
+    machine: target
+    command: "forjar extract -f {{params.base_config}} --tag database"
+    depends_on: [base-config]
+
+  # Cross-machine dependency analysis
+  cross-deps:
+    type: task
+    machine: target
+    command: "forjar cross-deps -f {{params.base_config}} --json"
+    depends_on: [base-config]
+
+  # ISO export for air-gapped deployment
+  iso-export:
+    type: task
+    machine: target
+    command: "forjar iso-export -f {{params.base_config}} --json"
+    depends_on: [base-config]

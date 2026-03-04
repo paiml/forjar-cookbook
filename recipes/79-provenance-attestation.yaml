@@ -1,0 +1,119 @@
+# Recipe: 79-provenance-attestation
+# Tier: 1+2 (validate + container plan; SLSA provenance generation)
+# Idempotency: strong (file content convergence)
+# Budget: first_apply < 15s, idempotent < 1s
+#
+# Generates SLSA provenance attestation, Merkle DAG lineage, and
+# convergence proofs — three layers of supply-chain assurance.
+# Refs: GH-5
+
+version: '1.0'
+name: provenance-attestation
+description: "Supply chain assurance — SLSA provenance, Merkle lineage, convergence proof"
+
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
+params:
+  config_path: /etc/forjar/supply-chain.yaml
+  state_dir: /var/lib/forjar/state
+
+machines:
+  target:
+    hostname: target
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-79-provenance
+      ephemeral: false
+      privileged: false
+      init: true
+
+policy:
+  failure: stop_on_first
+  parallel_machines: false
+  tripwire: true
+  lock_file: true
+  ssh_retries: 3
+  pre_apply: "echo 'Running supply-chain assurance checks'"
+  post_apply: "echo 'All provenance checks completed'"
+  notify:
+    on_success: "echo 'Supply chain assurance passed'"
+    on_failure: "echo 'Supply chain assurance FAILED'"
+    on_drift: "echo 'Supply chain drift detected'"
+
+outputs:
+  proof_status:
+    value: "all-passed"
+
+resources:
+  state-dir:
+    type: file
+    machine: target
+    path: "{{params.state_dir}}"
+    state: directory
+
+  sample-config:
+    type: file
+    machine: target
+    path: "{{params.config_path}}"
+    content: |
+      version: "1.0"
+      name: supply-chain-demo
+      machines:
+        app:
+          hostname: app
+          addr: 10.0.0.1
+      resources:
+        runtime:
+          type: package
+          machine: app
+          provider: apt
+          packages: [python3]
+        app-conf:
+          type: file
+          machine: app
+          path: /etc/app/config.yaml
+          content: "env: production"
+          depends_on: [runtime]
+        app-service:
+          type: service
+          machine: app
+          name: app
+          depends_on: [app-conf]
+
+  # Prove convergence — all 5 proof obligations
+  convergence-proof:
+    type: task
+    machine: target
+    command: "forjar prove -f {{params.config_path}}"
+    depends_on: [sample-config]
+    check: "forjar prove -f {{params.config_path}} 2>&1 | grep -q 'passed'"
+
+  # Generate SLSA provenance attestation
+  provenance:
+    type: task
+    machine: target
+    command: "forjar provenance -f {{params.config_path}} --json"
+    depends_on: [sample-config]
+    check: "forjar provenance -f {{params.config_path}} --json | grep -q 'blake3'"
+
+  # Show Merkle DAG lineage — content-addressed config tree
+  lineage:
+    type: task
+    machine: target
+    command: "forjar lineage -f {{params.config_path}}"
+    depends_on: [sample-config]
+    check: "forjar lineage -f {{params.config_path}} 2>&1 | grep -q 'Merkle root'"
+
+  # Privilege analysis — least-privilege audit
+  privilege-audit:
+    type: task
+    machine: target
+    command: "forjar privilege-analysis -f {{params.config_path}} --json"
+    depends_on: [sample-config]

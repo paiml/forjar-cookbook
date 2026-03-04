@@ -1,0 +1,125 @@
+# Recipe: 85-brownfield-import
+# Tier: 1+2 (validate + container plan; brownfield infrastructure import)
+# Idempotency: strong (file content convergence)
+# Budget: first_apply < 15s, idempotent < 1s
+#
+# Brownfield import: import existing unmanaged infrastructure into forjar
+# management. State reconstruction, catalog listing, agent registry,
+# and signing for trust establishment.
+# Refs: GH-5
+
+version: '1.0'
+name: brownfield-import
+description: "Brownfield import — adopt existing infrastructure into forjar management"
+
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
+params:
+  config_path: /etc/forjar/imported.yaml
+  state_dir: /var/lib/forjar/state
+  signing_key: /etc/forjar/keys/signing.key
+
+machines:
+  target:
+    hostname: target
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-85-brownfield
+      ephemeral: false
+      privileged: false
+      init: true
+
+policy:
+  failure: continue_independent
+  parallel_machines: false
+  tripwire: true
+  lock_file: true
+  ssh_retries: 3
+  pre_apply: "echo 'Beginning brownfield infrastructure import'"
+  post_apply: "echo 'Brownfield import completed'"
+  notify:
+    on_success: "echo 'Infrastructure import succeeded'"
+    on_failure: "echo 'Infrastructure import FAILED'"
+    on_drift: "echo 'Imported infrastructure drift detected'"
+
+outputs:
+  import_target:
+    value: "{{params.config_path}}"
+
+resources:
+  state-dir:
+    type: file
+    machine: target
+    path: "{{params.state_dir}}"
+    state: directory
+
+  sample-config:
+    type: file
+    machine: target
+    path: "{{params.config_path}}"
+    content: |
+      version: "1.0"
+      name: brownfield-demo
+      machines:
+        legacy:
+          hostname: legacy
+          addr: 10.0.0.50
+      resources:
+        legacy-pkg:
+          type: package
+          machine: legacy
+          provider: apt
+          packages: [apache2]
+        legacy-conf:
+          type: file
+          machine: legacy
+          path: /etc/apache2/apache2.conf
+          content: "ServerName legacy.example.com"
+          depends_on: [legacy-pkg]
+        legacy-svc:
+          type: service
+          machine: legacy
+          name: apache2
+          depends_on: [legacy-conf]
+
+  # Brownfield state import — discover what's already running
+  import-state:
+    type: task
+    machine: target
+    command: "forjar import-brownfield -f {{params.config_path}} -s {{params.state_dir}} --json"
+    depends_on: [sample-config, state-dir]
+
+  # Service catalog — what's available
+  catalog:
+    type: task
+    machine: target
+    command: "forjar catalog-list --json"
+    depends_on: [state-dir]
+
+  # Agent registry — registered forjar agents
+  agent-registry:
+    type: task
+    machine: target
+    command: "forjar agent-registry --json"
+    depends_on: [state-dir]
+
+  # Recipe signing — establish trust chain
+  sign-config:
+    type: task
+    machine: target
+    command: "forjar sign -f {{params.config_path}} --json"
+    depends_on: [sample-config]
+
+  # State reconstruction — rebuild state from event log
+  reconstruct:
+    type: task
+    machine: target
+    command: "forjar state-reconstruct -s {{params.state_dir}} --json"
+    depends_on: [state-dir]
