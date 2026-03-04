@@ -14,5 +14,8 @@
   - [Composition Stacks](./recipes/composition.md)
   - [Reproducibility Series](./recipes/reproducibility.md)
   - [Store Operations](./recipes/store-operations.md)
+  - [Agent Infrastructure](./recipes/agent-infrastructure.md)
+  - [Operational Intelligence](./recipes/operational-intelligence.md)
+  - [Supply Chain & Security](./recipes/supply-chain.md)
 - [Runner Setup](./runner-setup.md)
 - [Troubleshooting](./troubleshooting.md)
