@@ -17,5 +17,7 @@
   - [Agent Infrastructure](./recipes/agent-infrastructure.md)
   - [Operational Intelligence](./recipes/operational-intelligence.md)
   - [Supply Chain & Security](./recipes/supply-chain.md)
+  - [Task Pipelines & GPU](./recipes/task-pipelines.md)
+  - [Testing Recipes](./recipes/testing.md)
 - [Runner Setup](./runner-setup.md)
 - [Troubleshooting](./troubleshooting.md)
