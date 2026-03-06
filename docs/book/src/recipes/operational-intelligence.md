@@ -165,16 +165,16 @@ with all tables and performance targets (<50ms query, <1MB state.db).
 
 ```bash
 # FTS5 search (porter stemming)
-forjar query "nginx" --health --drift
+forjar state-query "nginx" --drift
 
 # Enriched query with all flags
-forjar query "bash" --history --drift --timing --churn -G
+forjar state-query "bash" --history --drift --timing --churn -G
 
 # Health summary
-forjar query --health
+forjar state-query --health
 
-# Destroy log history
-forjar query "nginx" --destroy-log
+# Reversibility analysis
+forjar state-query "nginx" --reversibility
 ```
 
 FTS5 uses porter tokenizer (`porter unicode61 remove_diacritics 2`) for

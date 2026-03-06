@@ -114,7 +114,6 @@ resources:
           "--timing": "Apply duration statistics",
           "--churn": "Change frequency across events",
           "--health": "Stack health percentage",
-          "--destroy-log": "Destroy history entries",
           "--reversibility": "Reversibility analysis",
           "-G": "Git history fusion via RRF"
         },
@@ -168,5 +167,5 @@ checks:
     description: "PostgreSQL config file exists"
   enrichment-valid:
     machine: target
-    command: "python3 -c 'import json; d=json.load(open(\"{{params.base_dir}}/query-enrichments.json\")); assert len(d[\"enrichment_flags\"]) == 8'"
-    description: "Query enrichment guide lists all 8 flags"
+    command: "python3 -c 'import json; d=json.load(open(\"{{params.base_dir}}/query-enrichments.json\")); assert len(d[\"enrichment_flags\"]) == 7'"
+    description: "Query enrichment guide lists all 7 flags"
