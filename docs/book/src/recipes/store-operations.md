@@ -211,6 +211,92 @@ I8 bashrs provability gate before execution.
 | Diff/Sync | `sync_exec.rs` | query upstream -> compare hashes -> re-import -> replay derivations |
 | Sandbox | `sandbox_run.rs` | create namespace -> isolate -> build -> extract -> hash -> store |
 
+## OCI Image Packing
+
+Pack any directory into an OCI image layout:
+
+```bash
+# Basic OCI pack
+forjar oci-pack ./my-app --tag myregistry.io/myapp:v1.0
+
+# With custom output directory
+forjar oci-pack ./dist --tag app:latest --output ./oci-layout
+
+# JSON output (for CI pipelines)
+forjar oci-pack ./build --tag app:v2 --json
+```
+
+The generated OCI layout is compatible with `docker load` via the
+included Docker-compat `manifest.json`.
+
+## SQLite Query Engine
+
+Query all managed resources with sub-second FTS5 full-text search:
+
+```bash
+# Search resources
+forjar state-query "bash" --state-dir state
+
+# Stack-wide health dashboard
+forjar state-query --health --state-dir state
+# Output:
+#  MACHINE   RESOURCES  CONVERGED  DRIFTED  FAILED
+#  intel            16         16        0       0
+#  lambda            7          7        0       0
+#  TOTAL            23         23        0       0  Stack health: 100%
+
+# Drift detection
+forjar state-query --drift --state-dir state
+
+# Change frequency (churn) analysis
+forjar state-query --churn --state-dir state
+
+# Git history fusion with RRF ranking
+forjar state-query "nginx" --state-dir state -G
+
+# JSON output for scripting
+forjar state-query "package" --type package --json
+```
+
+The database auto-ingests from `state/<machine>/state.lock.yaml` and
+`events.jsonl` on first query. Subsequent queries are sub-100ms.
+
+## Registry Push
+
+Push built images to OCI-compliant registries:
+
+```bash
+# Push to registry (OCI Distribution v1.1)
+forjar build -f app.yaml --resource my-image --push
+
+# Protocol: HEAD check → blob upload → manifest PUT
+# --check-existing skips blobs that already exist (default: on)
+```
+
+## Convergence Testing
+
+Verify resources converge and maintain idempotency:
+
+```bash
+# Run convergence tests in sandboxes
+forjar test convergence config.yaml --parallel 4
+
+# Test pairwise preservation
+forjar test convergence config.yaml --pairs
+```
+
+## Mutation Testing
+
+Verify drift detection by mutating system state:
+
+```bash
+# Run mutation suite
+forjar test mutate config.yaml --sandbox pepita
+
+# 8 operators: delete_file, modify_content, change_permissions,
+# stop_service, remove_package, kill_process, unmount, corrupt_config
+```
+
 ## Related Recipes
 
 | Recipe | Topic | Key Feature |
