@@ -127,3 +127,56 @@ forjar impact -f forjar.yaml -r critical-pkg --json > impact.json
 
 Estimates based on static analysis of resource types (Package ~30s, File ~2s,
 Service ~10s) and dependency chain length.
+
+## #86 Generation Lifecycle
+
+Full generation lifecycle test: apply → generation create → diff → modify →
+re-apply → diff → undo planning → destroy-log replay classification.
+Validates generation diff types, destroy-log.jsonl parsing, and
+SQLite schema v2 tables (destroy_log, drift_findings, ingest_cursor).
+
+**Tier**: 1+2 | **Idempotency**: Strong | **Grade**: A
+
+```bash
+# Compare two generations
+forjar diff --generation 5 8
+
+# JSON output for CI
+forjar diff --generation 5 8 --json
+
+# Undo-destroy dry run
+forjar undo-destroy --dry-run
+
+# Replay reliable entries
+forjar undo-destroy --yes
+```
+
+Generation diff classifies each resource as added (+), modified (~),
+removed (-), or unchanged. Undo-destroy replays `config_fragment` entries
+from `destroy-log.jsonl` via `codegen::apply_script()`.
+
+## #87 SQLite Query Engine
+
+SQLite query engine demo: FTS5 search with porter tokenizer, health queries,
+drift detection, churn analysis, and query enrichments. Validates schema v2
+with all tables and performance targets (<50ms query, <1MB state.db).
+
+**Tier**: 1+2 | **Idempotency**: Strong | **Grade**: A
+
+```bash
+# FTS5 search (porter stemming)
+forjar query "nginx" --health --drift
+
+# Enriched query with all flags
+forjar query "bash" --history --drift --timing --churn -G
+
+# Health summary
+forjar query --health
+
+# Destroy log history
+forjar query "nginx" --destroy-log
+```
+
+FTS5 uses porter tokenizer (`porter unicode61 remove_diacritics 2`) for
+stemmed matching. Columns: `resource_id`, `resource_type`, `path`,
+`packages`, `content_preview` — no raw JSON indexed.

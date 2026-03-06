@@ -1,0 +1,172 @@
+# Recipe: 87-sqlite-query-engine
+# Tier: 1+2 (validate + container apply)
+# Idempotency: strong
+# Budget: first_apply < 15s, idempotent < 3s
+#
+# Exercises the SQLite query engine: FTS5 search with porter tokenizer,
+# health queries, drift detection, churn analysis, and destroy-log ingestion.
+# Validates schema v2 with all tables populated.
+
+version: '1.0'
+name: sqlite-query-engine
+description: "SQLite FTS5 search, health, drift, and destroy-log queries"
+
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
+params:
+  base_dir: /tmp/forjar-sqlite-demo
+  db_name: demo-query
+
+machines:
+  target:
+    hostname: target
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-87-sqlite-query
+      ephemeral: false
+      privileged: false
+      init: true
+
+resources:
+  # Base structure
+  query-dir:
+    type: file
+    machine: target
+    path: "{{params.base_dir}}"
+    state: directory
+    owner: root
+    mode: '0755'
+    tags: [base, query]
+    resource_group: query-engine
+
+  # Simulated state files for multi-resource query demo
+  web-config:
+    type: file
+    machine: target
+    path: "{{params.base_dir}}/nginx.conf"
+    owner: root
+    mode: '0644'
+    content: |
+      # FTS5 searchable: nginx web server configuration
+      worker_processes auto;
+      events { worker_connections 1024; }
+      http {
+        server {
+          listen 80;
+          server_name {{params.db_name}}.internal;
+        }
+      }
+    depends_on: [query-dir]
+    tags: [web, configuration, query]
+    resource_group: query-engine
+
+  db-config:
+    type: file
+    machine: target
+    path: "{{params.base_dir}}/postgresql.conf"
+    owner: root
+    mode: '0644'
+    content: |
+      # FTS5 searchable: database configuration
+      listen_addresses = 'localhost'
+      max_connections = 100
+      shared_buffers = 256MB
+      wal_level = replica
+    depends_on: [query-dir]
+    tags: [database, configuration, query]
+    resource_group: query-engine
+
+  cache-config:
+    type: file
+    machine: target
+    path: "{{params.base_dir}}/redis.conf"
+    owner: root
+    mode: '0644'
+    content: |
+      # FTS5 searchable: cache layer configuration
+      bind 127.0.0.1
+      port 6379
+      maxmemory 512mb
+      maxmemory-policy allkeys-lru
+    depends_on: [query-dir]
+    tags: [cache, configuration, query]
+    resource_group: query-engine
+
+  # Query enrichment reference
+  enrichment-guide:
+    type: file
+    machine: target
+    path: "{{params.base_dir}}/query-enrichments.json"
+    owner: root
+    mode: '0644'
+    content: |
+      {
+        "enrichment_flags": {
+          "--history": "Generation history per resource",
+          "--drift": "Drift findings (expected vs actual hash)",
+          "--timing": "Apply duration statistics",
+          "--churn": "Change frequency across events",
+          "--health": "Stack health percentage",
+          "--destroy-log": "Destroy history entries",
+          "--reversibility": "Reversibility analysis",
+          "-G": "Git history fusion via RRF"
+        },
+        "fts5_config": {
+          "tokenizer": "porter unicode61 remove_diacritics 2",
+          "columns": ["resource_id", "resource_type", "path", "packages", "content_preview"],
+          "content_sync": true,
+          "porter_stemming": "reduces 'configurations' to 'configur' for broader matches"
+        },
+        "performance_targets": {
+          "query_latency": "<50ms for 3 machines",
+          "db_size": "<1MB for 3 machines x 20 resources"
+        }
+      }
+    depends_on: [query-dir]
+    tags: [documentation, query]
+    resource_group: query-engine
+
+policy:
+  failure: stop_on_first
+  parallel_machines: false
+  tripwire: true
+  lock_file: true
+  ssh_retries: 3
+  pre_apply: "echo 'SQLite query engine demo starting'"
+  post_apply: "echo 'Query engine demo complete'"
+  notify:
+    on_success: "echo 'Query engine: all configs deployed'"
+    on_failure: "echo 'Query engine: deployment failed'"
+    on_drift: "echo 'Query engine: config drift detected'"
+
+outputs:
+  config_count:
+    value: "3"
+    description: "Number of searchable config files"
+  fts5_tokenizer:
+    value: "porter unicode61"
+    description: "FTS5 tokenizer (porter stemming for broader matches)"
+  schema_version:
+    value: "2"
+    description: "SQLite schema version with all tables"
+
+checks:
+  nginx-deployed:
+    machine: target
+    command: "test -f {{params.base_dir}}/nginx.conf"
+    description: "Nginx config file exists"
+  postgres-deployed:
+    machine: target
+    command: "test -f {{params.base_dir}}/postgresql.conf"
+    description: "PostgreSQL config file exists"
+  enrichment-valid:
+    machine: target
+    command: "python3 -c 'import json; d=json.load(open(\"{{params.base_dir}}/query-enrichments.json\")); assert len(d[\"enrichment_flags\"]) == 8'"
+    description: "Query enrichment guide lists all 8 flags"

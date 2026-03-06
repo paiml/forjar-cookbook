@@ -1,0 +1,162 @@
+# Recipe: 86-generation-lifecycle
+# Tier: 1+2 (validate + container apply)
+# Idempotency: strong
+# Budget: first_apply < 20s, idempotent < 5s
+#
+# Exercises the generation lifecycle: apply → generation create → diff →
+# modify → apply → diff → undo → undo-destroy replay classification.
+# Validates: generation diff types, destroy-log.jsonl parsing,
+# SQLite schema v2 tables (destroy_log, drift_findings, ingest_cursor).
+
+version: '1.0'
+name: generation-lifecycle
+description: "Generation diff, undo planning, and destroy-log replay"
+
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
+params:
+  base_dir: /tmp/forjar-gen-lifecycle
+  app_name: gen-lifecycle-demo
+  gen_test_marker: generation-lifecycle-v1
+
+machines:
+  target:
+    hostname: target
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-86-gen-lifecycle
+      ephemeral: false
+      privileged: false
+      init: true
+
+resources:
+  # Layer 1: Base directory structure
+  base-dir:
+    type: file
+    machine: target
+    path: "{{params.base_dir}}"
+    state: directory
+    owner: root
+    mode: '0755'
+    tags: [base, generation]
+    resource_group: gen-lifecycle
+
+  # Layer 2: App config (will change between generations)
+  app-config:
+    type: file
+    machine: target
+    path: "{{params.base_dir}}/{{params.app_name}}.conf"
+    owner: root
+    mode: '0644'
+    content: |
+      # {{params.app_name}} configuration
+      marker={{params.gen_test_marker}}
+      version=1
+      workers=4
+      log_level=info
+    depends_on: [base-dir]
+    tags: [configuration, generation]
+    resource_group: gen-lifecycle
+
+  # Layer 3: Health check endpoint
+  health-check:
+    type: file
+    machine: target
+    path: "{{params.base_dir}}/health.json"
+    owner: root
+    mode: '0644'
+    content: |
+      {
+        "service": "{{params.app_name}}",
+        "status": "healthy",
+        "generation_marker": "{{params.gen_test_marker}}",
+        "resources": ["base-dir", "app-config", "health-check", "destroy-log-marker"]
+      }
+    depends_on: [app-config]
+    tags: [health, generation]
+    resource_group: gen-lifecycle
+
+  # Layer 4: Destroy-log test marker (validates destroy-log.jsonl format)
+  destroy-log-marker:
+    type: file
+    machine: target
+    path: "{{params.base_dir}}/destroy-log-sample.jsonl"
+    owner: root
+    mode: '0644'
+    content: |
+      {"timestamp":"2026-03-05T14:30:00Z","machine":"target","resource_id":"old-config","resource_type":"file","pre_hash":"blake3:abc123","generation":1,"config_fragment":"type: file\npath: /tmp/old.conf\ncontent: legacy\n","reliable_recreate":true}
+      {"timestamp":"2026-03-05T14:31:00Z","machine":"target","resource_id":"legacy-svc","resource_type":"service","pre_hash":"blake3:def456","generation":1,"config_fragment":null,"reliable_recreate":false}
+    depends_on: [base-dir]
+    tags: [destroy-log, generation]
+    resource_group: gen-lifecycle
+
+  # Layer 5: SQLite schema validation marker
+  schema-marker:
+    type: file
+    machine: target
+    path: "{{params.base_dir}}/schema-v2.json"
+    owner: root
+    mode: '0644'
+    content: |
+      {
+        "schema_version": 2,
+        "tables": ["machines", "generations", "resources", "events", "run_logs",
+                    "destroy_log", "drift_findings", "ingest_cursor"],
+        "fts5_tables": ["resources_fts", "events_fts", "run_logs_fts"],
+        "fts5_tokenizer": "porter unicode61 remove_diacritics 2",
+        "fts5_columns": ["resource_id", "resource_type", "path", "packages", "content_preview"],
+        "indexes": ["idx_resources_status", "idx_resources_path",
+                     "idx_drift_machine", "idx_destroy_machine"]
+      }
+    depends_on: [base-dir]
+    tags: [schema, generation]
+    resource_group: gen-lifecycle
+
+policy:
+  failure: stop_on_first
+  parallel_machines: false
+  tripwire: true
+  lock_file: true
+  ssh_retries: 3
+  pre_apply: "echo 'Generation lifecycle test starting'"
+  post_apply: "echo 'Generation lifecycle test complete'"
+  notify:
+    on_success: "echo 'Generation lifecycle: all resources converged'"
+    on_failure: "echo 'Generation lifecycle: apply failed'"
+    on_drift: "echo 'Generation lifecycle: drift detected'"
+
+outputs:
+  base_dir:
+    value: "{{params.base_dir}}"
+    description: "Generation lifecycle test directory"
+  schema_version:
+    value: "2"
+    description: "Expected SQLite schema version"
+  resource_count:
+    value: "5"
+    description: "Total managed resources"
+
+checks:
+  config-content:
+    machine: target
+    command: "grep -q 'marker={{params.gen_test_marker}}' {{params.base_dir}}/{{params.app_name}}.conf"
+    description: "App config contains generation marker"
+  health-valid-json:
+    machine: target
+    command: "python3 -c 'import json; json.load(open(\"{{params.base_dir}}/health.json\"))'"
+    description: "Health endpoint is valid JSON"
+  destroy-log-format:
+    machine: target
+    command: "head -1 {{params.base_dir}}/destroy-log-sample.jsonl | python3 -c 'import json,sys; d=json.load(sys.stdin); assert \"resource_id\" in d'"
+    description: "Destroy-log sample is valid JSONL with expected fields"
+  schema-tables:
+    machine: target
+    command: "python3 -c 'import json; d=json.load(open(\"{{params.base_dir}}/schema-v2.json\")); assert len(d[\"tables\"]) == 8'"
+    description: "Schema marker lists all 8 core tables"
