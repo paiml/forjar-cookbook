@@ -18,6 +18,7 @@
   - [Operational Intelligence](./recipes/operational-intelligence.md)
   - [Supply Chain & Security](./recipes/supply-chain.md)
   - [Task Pipelines & GPU](./recipes/task-pipelines.md)
+  - [Container Builds](./recipes/container-builds.md)
   - [Testing Recipes](./recipes/testing.md)
 - [Runner Setup](./runner-setup.md)
 - [Troubleshooting](./troubleshooting.md)
