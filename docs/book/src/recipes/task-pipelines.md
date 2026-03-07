@@ -98,6 +98,39 @@ resources:
 
 Restart uses exponential backoff: 2s, 4s, 8s, 16s, 32s, capped at 60s.
 
+## Dispatch Mode (FJ-2700)
+
+Dispatch tasks are parameterized commands triggered on-demand via
+`forjar run`. Unlike pipeline or batch tasks that converge during
+`forjar apply`, dispatch tasks are invoked explicitly with parameter
+overrides.
+
+```yaml
+resources:
+  deploy-app:
+    type: task
+    machine: ci
+    task_mode: dispatch
+    command: "deploy --env {{ env }} --version {{ version }}"
+```
+
+Run with:
+
+```bash
+forjar run deploy-app --param env=production --param version=2.1
+```
+
+Preview the prepared command without executing:
+
+```bash
+forjar run deploy-app --param env=staging --json
+# {"task":"deploy-app","command":"deploy --env staging --version 2.1","script":"...","timeout_secs":null}
+```
+
+Dispatch tasks validate that the resource is `type: task`, parse
+`KEY=VALUE` parameters, substitute `{{ param }}` templates, and execute
+via the configured transport (local or SSH).
+
 ## GPU Scheduling
 
 Multiple GPU tasks can run in parallel on different devices using
