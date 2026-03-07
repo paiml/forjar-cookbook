@@ -42,6 +42,54 @@ Common causes for low dimension scores:
 - **RES**: no failure policy, no dependency DAG, no lifecycle hooks
 - **CMP**: no params, no templates, no includes, no tags
 
+## Debugging with `forjar logs`
+
+Every `forjar apply` captures structured run logs under `state/<machine>/runs/<run_id>/`.
+Use `forjar logs` to inspect what happened.
+
+### View recent runs
+
+```bash
+forjar logs --machine intel           # latest run on intel
+forjar logs --all-machines            # latest run across all machines
+forjar logs --run <run_id>            # specific run by ID
+```
+
+### Filter to failures
+
+```bash
+forjar logs --failures                # only show failed resources
+forjar logs --resource nginx-pkg      # single resource detail
+forjar logs --script                  # include generated script source
+```
+
+### JSON output for tooling
+
+```bash
+forjar logs --json | jq '.[] | select(.failed)'
+```
+
+### Garbage collection
+
+Old run logs accumulate over time. Clean them up:
+
+```bash
+forjar logs --gc --dry-run            # preview what would be deleted
+forjar logs --gc                      # delete old runs (keeps last 10)
+forjar logs --gc --keep-failed        # keep failed runs, delete old successes
+```
+
+### Run directory structure
+
+```
+state/intel/runs/run-20260307-143022-a1b2/
+  meta.yaml                           # run metadata + per-resource status
+  nginx-pkg.apply.log                 # structured log (stdout, stderr, exit code)
+  nginx-pkg.script                    # raw generated script
+  cargo-tools.apply.log
+  cargo-tools.script
+```
+
 ## Build Issues
 
 ### "cargo test fails"
