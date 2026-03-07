@@ -140,3 +140,32 @@ config. Tests multi-machine orchestration at fleet scale.
 monitoring-agent (file), ssh-keys (file)
 
 **Tier**: 1+2 | **Idempotency**: Strong | **Grade**: A
+
+## Operator Authorization
+
+Machines can restrict which operators are allowed to apply changes
+using `allowed_operators`. When set, `forjar apply --operator NAME`
+must match the list or the apply is rejected before execution.
+
+```yaml
+machines:
+  production:
+    hostname: prod.example.com
+    addr: 10.0.1.10
+    allowed_operators:
+      - deploy-bot
+      - ops-team
+```
+
+```bash
+# Allowed — deploy-bot is in the list
+forjar apply -f forjar.yaml --operator deploy-bot
+
+# Denied — random-user is not authorized
+forjar apply -f forjar.yaml --operator random-user
+# Error: operator 'random-user' not authorized for machine 'production'
+```
+
+If `allowed_operators` is empty or omitted, all operators are permitted.
+When `--operator` is not specified, identity is resolved from
+`$USER@hostname` automatically.
