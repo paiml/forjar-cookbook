@@ -69,13 +69,14 @@ The `--push` flag uses OCI Distribution v1.1 protocol:
 
 ## With Docker Load
 
-Load the built image directly into the local Docker daemon:
+Load the built image directly into the local Docker/Podman daemon:
 
 ```bash
 forjar build -f forjar.yaml app --load
 ```
 
-Requires `docker` or `podman` in PATH.
+Creates an OCI tarball from the layout directory and pipes it to
+`docker load` or `podman load`. Requires `docker` or `podman` in PATH.
 
 ## FAR Archive Export
 
@@ -85,7 +86,12 @@ Wrap the OCI layout in a FAR (Forjar Archive) for offline distribution:
 forjar build -f forjar.yaml app --far
 ```
 
-FAR archives use zstd compression with BLAKE3 Merkle verification.
+Produces `state/images/<resource>.far` with:
+- zstd-compressed file chunks
+- BLAKE3 Merkle tree hash for streaming verification
+- Full manifest with file inventory, provenance, and architecture metadata
+
+FAR archives are self-contained and can be transferred to air-gapped environments.
 
 ## Sandbox Build (Ephemeral Container)
 
