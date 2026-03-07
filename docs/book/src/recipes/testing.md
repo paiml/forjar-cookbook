@@ -79,12 +79,49 @@ name: nginx web server
 config: forjar.yaml
 behaviors:
   - name: nginx is installed
-    state: present
+    verify:
+      command: "dpkg -l nginx | grep -q '^ii'"
+      exit_code: 0
+
+  - name: config syntax valid
+    verify:
+      command: "nginx -t 2>&1"
+      stderr_contains: "syntax is ok"
+
+  - name: nginx is running
+    verify:
+      command: "systemctl is-active nginx"
+      stdout: "active"
+
   - name: port 80 is open
-    state: listening
-  - name: config is valid
-    state: verified
+    verify:
+      command: "true"
+      port_open: 80
+
+  - name: config file matches expected
+    verify:
+      command: "true"
+      file_exists: /etc/nginx/nginx.conf
+      file_content: "blake3:a1b2c3..."
+
+  - name: idempotency holds
+    type: convergence
+    convergence:
+      second_apply: noop
+      state_unchanged: true
 ```
+
+### Assertion Types
+
+| Field | Description |
+|-------|-------------|
+| `verify.command` | Shell command to run |
+| `verify.exit_code` | Expected exit code (default: 0) |
+| `verify.stdout` | Expected stdout content |
+| `verify.stderr_contains` | Required substring in stderr |
+| `verify.file_exists` | Path must exist |
+| `verify.file_content` | Exact match or `blake3:<hash>` |
+| `verify.port_open` | TCP port accepting connections |
 
 ```bash
 forjar test --group behavior -f forjar.yaml
@@ -107,6 +144,30 @@ Resource Coverage Report
   nginx-config: L2 (file)
   firewall-rule: L0 (network)
 ```
+
+## Contract Coverage
+
+Verify per-resource verification levels and codebase contract annotations:
+
+```bash
+forjar contracts --coverage -f forjar.yaml
+```
+
+Output shows contract levels (L0 = no check, L1 = check script, L2 = check+apply+hash):
+
+```
+Contract Coverage Report
+========================
+Resources analyzed: 5
+  Level 2 (runtime — check+apply+hash):   4
+  Level 1 (labeled — check script only):   1
+  Level 0 (unlabeled — no check script):   0
+
+Codebase #[contract] annotations: 10
+Contract coverage: 100% (5 of 5 resources have check scripts)
+```
+
+Use `--json` for CI integration.
 
 ## Unified Test Runner
 
