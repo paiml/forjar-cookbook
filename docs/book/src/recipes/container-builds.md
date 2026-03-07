@@ -87,6 +87,27 @@ forjar build -f forjar.yaml app --far
 
 FAR archives use zstd compression with BLAKE3 Merkle verification.
 
+## Sandbox Build (Ephemeral Container)
+
+Build inside an ephemeral Docker/Podman container. The container starts
+from the base image, resource scripts run inside it, and filesystem
+changes are extracted into an OCI layout:
+
+```bash
+forjar build -f forjar.yaml app --sandbox
+```
+
+Pipeline:
+1. `docker run -d` starts an ephemeral container from the base image
+2. `docker exec` applies each resource script
+3. `docker diff` extracts added files
+4. `docker cp` copies files to a staging directory
+5. Overlay scan + image assembler produce the OCI layout
+6. Container is force-removed on exit
+
+This produces host-identical builds without modifying the host filesystem.
+Requires `docker` or `podman` in PATH.
+
 ## Base Image Layer Extraction
 
 When a resource has `image:` set, forjar looks for a local OCI layout
