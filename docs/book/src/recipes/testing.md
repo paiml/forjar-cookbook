@@ -90,6 +90,24 @@ behaviors:
 forjar test --group behavior -f forjar.yaml
 ```
 
+## Resource Coverage Report
+
+Check which resources have behavior specs and check scripts:
+
+```bash
+forjar test --group coverage -f forjar.yaml
+```
+
+Output shows per-resource coverage levels (L0 = no tests, L1 = check script, L2 = behavior spec):
+
+```
+Resource Coverage Report
+========================
+  nginx-pkg: L1 (package)
+  nginx-config: L2 (file)
+  firewall-rule: L0 (network)
+```
+
 ## Unified Test Runner
 
 Run all three modes with a single command:
