@@ -155,6 +155,32 @@ Layer types:
 - **Build**: Command output captured as layer
 - **Derivation**: Nix-style store path export
 
+## Build Caching (E16)
+
+Forjar caches image builds based on BLAKE3 input hashing. On rebuild, if
+all layer inputs (file paths, content, permissions) are unchanged, the
+build is skipped:
+
+```
+$ forjar build -f forjar.yaml app
+Building app (myapp:1.0.0) — CACHED
+  Layer inputs unchanged (hash: a1b2c3d4...), skipping rebuild
+```
+
+The cache is stored in `state/images/<resource>/build-cache.hash`.
+Delete this file to force a rebuild.
+
+## Build Metrics (E17)
+
+Every build writes `build-metrics.json` to the output directory with:
+- Image tag, layer count, total size
+- Per-layer metrics (file count, compressed/uncompressed sizes)
+- Build duration, timestamp, forjar version, target architecture
+
+```bash
+cat state/images/app/build-metrics.json
+```
+
 ## OCI Layout Structure
 
 Every `forjar build` produces a standard OCI layout:
@@ -174,3 +200,32 @@ Dual digest strategy:
 - **BLAKE3** — forjar store addressing, drift detection, caching
 - **SHA-256** (uncompressed) — OCI DiffID in image config
 - **SHA-256** (compressed) — OCI layer digest in manifest
+
+## Image Drift Detection (E15)
+
+After building and deploying an image, forjar can detect drift by
+comparing the running container's image digest to the expected
+manifest digest from the build:
+
+```bash
+forjar drift -f forjar.yaml
+```
+
+For each converged image resource, forjar runs:
+```
+docker inspect <container> --format '{{.Image}}'
+```
+
+Drift scenarios:
+- **Digest mismatch** — someone pushed a different image
+- **Container not running** — expected container has stopped
+- **Transport error** — machine unreachable
+
+To skip drift checks for specific images, use lifecycle rules:
+```yaml
+resources:
+  dev-image:
+    type: image
+    lifecycle:
+      ignore_drift: ["*"]
+```

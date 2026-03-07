@@ -75,6 +75,16 @@ The `gpu_device: 0` field injects `CUDA_VISIBLE_DEVICES=0` into all stages.
 
 ## Service Mode
 
+Service tasks run long-lived processes managed by forjar. Each mode
+generates a distinct shell script:
+
+- **Batch**: Direct command execution (`set -euo pipefail; <command>`)
+- **Pipeline**: Sequential stages with gate enforcement
+- **Service**: nohup background process + PID file + health check retry loop
+- **Dispatch**: Pre-flight quality gate check before command execution
+
+## Service Mode
+
 Service tasks run long-lived processes with health checks and restart policies.
 
 ### Agent Service (batuta)
@@ -201,6 +211,45 @@ resources:
     command: "python train.py --model /tmp/model.bin --output /tmp/gradients.bin"
     gather:
       - "/tmp/gradients.bin:/shared/gradients/node-2.bin"
+```
+
+## Task Input Caching (FJ-2701)
+
+Tasks with `cache: true` and `task_inputs` patterns use BLAKE3
+hashing to skip re-execution when inputs haven't changed:
+
+```yaml
+resources:
+  build-app:
+    type: task
+    task_mode: batch
+    cache: true
+    task_inputs:
+      - "src/**/*.rs"
+      - Cargo.toml
+      - Cargo.lock
+    output_artifacts:
+      - target/release/app
+    command: "cargo build --release"
+```
+
+On `forjar apply`, the executor:
+1. Hashes all files matching `task_inputs` patterns (BLAKE3)
+2. Compares to stored hash from the last successful run
+3. Skips execution if inputs unchanged
+4. Stores updated hash after successful execution
+
+This is especially useful for expensive build tasks where source
+files rarely change between applies.
+
+Pipeline stages also support per-stage caching via `inputs`/`outputs`:
+
+```yaml
+stages:
+  - name: lint
+    command: "cargo clippy"
+    inputs: ["src/**/*.rs"]
+    gate: true
 ```
 
 ## Barrier Tasks
