@@ -6,8 +6,9 @@ convergence, mutation, and behavior testing modes.
 ## Convergence Testing
 
 Verify that applying a recipe twice produces the same result.
-The convergence runner builds targets from your config and tests
-each resource in parallel.
+The convergence runner creates isolated tempdir sandboxes, runs
+scripts via `bash -euo pipefail`, and verifies convergence,
+idempotency, and preservation in parallel.
 
 ```bash
 forjar test --group convergence -f forjar.yaml
@@ -16,24 +17,27 @@ forjar test --group convergence -f forjar.yaml
 Output:
 
 ```
-Convergence Test Runner (simulated)
-===================================
-Stack: my-stack (5 resources)
+Convergence Verification (mode: simulated)
+==========================================
+Backend: pepita (mode: simulated)
 
-Targets: 5 resources
+  [PASS] nginx-config/file: converge=true idem=true preserve=true (18ms)
+  [PASS] app-config/file: converge=true idem=true preserve=true (15ms)
+  [PASS] db-config/file: converge=true idem=true preserve=true (14ms)
 
-  [PASS] nginx-pkg/package: converge=true idem=true preserve=true
-  [PASS] nginx-config/file: converge=true idem=true preserve=true
-  [PASS] nginx-svc/service: converge=true idem=true preserve=true
-
-Convergence: 5/5 passed (100%)
+Convergence: 3/3 passed (100%)
 ```
+
+Each test creates real files in `$FORJAR_SANDBOX`, executes
+apply/query scripts, and verifies state matches across runs.
 
 ## Mutation Testing
 
 Verify that forjar detects all infrastructure drift scenarios.
-Eight mutation operators simulate common drift (file deletion,
-content change, permission change, service stop, package removal).
+Eight mutation operators simulate common drift. File-scoped
+operators (delete, modify, chmod, corrupt) run in local sandboxes.
+System operators (stop service, remove package) require a
+container backend.
 
 ```bash
 forjar test --group mutation -f forjar.yaml
@@ -42,17 +46,18 @@ forjar test --group mutation -f forjar.yaml
 Output:
 
 ```
-Mutation Test Runner (mode: Simulated)
-====================
-Stack: my-stack (5 resources)
+Mutation Score: 80% (Grade B)
+  8/10 detected, 0 survived, 2 errored
+  file: 8/8 detected (100%)
+  service: 0/2 errored (requires container backend)
 
-Mutation Score: 100% (Grade A)
-  7/7 detected, 0 survived, 0 errored
-
-  file: 4/4 detected (100%)
-  package: 1/1 detected (100%)
-  service: 2/2 detected (100%)
+Safety: system operators rejected in local mode:
+  stop_service: requires container backend
+  kill_process: requires container backend
 ```
+
+With Docker available, system operators run in ephemeral
+containers and the score improves to Grade A.
 
 ### Mutation Score Grades
 
@@ -98,7 +103,7 @@ This produces a combined report:
 ```
 === Combined Test Report ===
   Convergence: 3/3 passed (100%)
-  Mutation:    7/7 detected (grade A)
+  Mutation:    8/10 detected (grade B, 2 need container)
   Behavior:    3/3 passed
   Overall: PASS
 ```
