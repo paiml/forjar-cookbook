@@ -73,6 +73,7 @@ resources:
     enabled: true
     restart_on: [audit-rules]
     depends_on: [audit-rules]
+    post_apply: "auditctl -l | wc -l"
     tags: [cis, audit]
     resource_group: audit
 
@@ -167,7 +168,10 @@ policy:
   parallel_machines: false
   tripwire: true
   lock_file: true
+  ssh_retries: 3
   deny_paths: [/etc/shadow, /etc/gshadow]
+  pre_apply: "echo '[pre] CIS hardening starting'"
+  post_apply: "echo '[post] CIS hardening complete'"
   notify:
     on_success: "echo 'CIS Level 1 hardening applied'"
     on_failure: "echo 'CIS hardening failed'"

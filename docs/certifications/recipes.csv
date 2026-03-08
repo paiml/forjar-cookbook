@@ -65,7 +65,7 @@ recipe_num,name,category,status,tier,idempotency_class,first_apply_ms,idempotent
 89,postgresql-replication,infra,pending,2+3,strong,,,,,,,41,C,C,pending,,,,100,100,85,50,75,2.0
 90,haproxy-ha,infra,pending,2+3,strong,,,,,,,41,C,C,pending,,,,100,100,85,50,75,2.0
 91,podman-rootless,infra,pending,2+3,strong,,,,,,,40,C,C,pending,,,,100,100,85,45,65,2.0
-92,cis-hardening,infra,pending,2+3,strong,,,,,,,40,C,C,pending,,,,100,100,85,45,65,2.0
+92,cis-hardening,infra,pending,2+3,strong,,,,,,,43,B,B,pending,,,,100,100,85,81,65,2.0
 93,k3s-cluster,infra,pending,2+3,strong,,,,,,,32,D,D,pending,,,,10,100,85,66,75,2.0
 94,canary-deployment,devops,pending,2+3,strong,,,,,,,32,C,C,pending,,,,40,100,85,46,65,2.0
 95,otel-collector,infra,pending,2+3,strong,,,,,,,34,C,C,pending,,,,40,100,85,61,65,2.0
