@@ -144,6 +144,34 @@ forjar lint -f recipe.yaml --strict     # additional strict rules
 forjar lint -f recipe.yaml --fix        # auto-fix (resource key sorting)
 ```
 
+## Performance Benchmarks
+
+### Running benchmarks
+
+```bash
+forjar bench --iterations 1000              # colorized table
+forjar bench --iterations 1000 --json       # JSON with p50/p95 stats
+forjar bench --compare                      # diff against baseline
+```
+
+### Updating the baseline
+
+```bash
+make bench-update                           # writes benchmarks/RESULTS.md
+```
+
+### Investigating regressions
+
+Use `--compare` to see percentage deltas against baseline:
+
+```bash
+forjar bench --iterations 1000 --compare
+# Positive delta = faster, negative = regression
+```
+
+JSON output with `--compare` includes `baseline_avg_us` and `delta_pct` fields
+for CI integration.
+
 ## Build Issues
 
 ### "cargo test fails"
