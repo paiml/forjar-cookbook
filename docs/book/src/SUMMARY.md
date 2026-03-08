@@ -24,6 +24,7 @@
   - [High Availability](./recipes/high-availability.md)
   - [Platform Dogfood](./recipes/platform-dogfood.md)
   - [Provisioning & Images](./recipes/provisioning.md)
+  - [Query Enrichments](./recipes/query-enrichments.md)
 - [Quality Scoring](./quality-scoring.md)
 - [Runner Setup](./runner-setup.md)
 - [Troubleshooting](./troubleshooting.md)
