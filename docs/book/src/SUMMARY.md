@@ -26,6 +26,7 @@
   - [Provisioning & Images](./recipes/provisioning.md)
   - [Query Enrichments](./recipes/query-enrichments.md)
   - [Secret Providers](./recipes/secret-providers.md)
+  - [Observability](./recipes/observability.md)
 - [Quality Scoring](./quality-scoring.md)
 - [Runner Setup](./runner-setup.md)
 - [Troubleshooting](./troubleshooting.md)
