@@ -1,38 +1,14 @@
-//! Forjar Score — multi-dimensional recipe quality scoring.
+//! `ForjarScore` v2 — thin bridge to forjar's scoring engine.
 //!
-//! Computes a composite score (0–100) across 8 dimensions and assigns
-//! a letter grade (A–F). Designed so A-grade requires >= 80 in every
-//! dimension — no gaming by overperforming in easy dimensions.
-
-mod config;
-mod dimensions;
+//! Delegates all scoring computation to forjar's v2 two-tier grading system.
+//! Keeps cookbook-specific presentation types (`Grade`, `DimensionScores`) for
+//! backward compatibility with CSV, table, and report formatting.
 
 use crate::qualify::{IdempotencyClass, RecipeStatus};
-pub use config::{PolicyConfig, RecipeConfig};
-use dimensions::{
-    score_cmp, score_cor, score_doc, score_idm, score_obs, score_prf, score_res, score_saf,
-};
 use serde::{Deserialize, Serialize};
 
-/// Current scoring algorithm version.
-pub const SCORE_VERSION: &str = "1.0";
-
-/// Maximum points per dimension.
-const MAX_POINTS: u32 = 100;
-
-/// Safety hard cap when critical violation exists.
-pub(crate) const SAFETY_CRITICAL_CAP: u32 = 40;
-
-// ── Dimension weights (must sum to 100) ──────────────────────────
-
-const W_COR: u32 = 20;
-const W_IDM: u32 = 20;
-const W_PRF: u32 = 15;
-const W_SAF: u32 = 15;
-const W_OBS: u32 = 10;
-const W_DOC: u32 = 8;
-const W_RES: u32 = 7;
-const W_CMP: u32 = 5;
+/// Scoring algorithm version — delegated to forjar.
+pub use forjar::core::scoring::SCORE_VERSION;
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -67,6 +43,21 @@ impl DimensionScores {
         .into_iter()
         .min()
         .unwrap_or(0)
+    }
+
+    /// Build from forjar's dimension score vector.
+    fn from_forjar(dims: &[forjar::core::scoring::DimensionScore]) -> Self {
+        let get = |code: &str| dims.iter().find(|d| d.code == code).map_or(0, |d| d.score);
+        Self {
+            cor: get("COR"),
+            idm: get("IDM"),
+            prf: get("PRF"),
+            saf: get("SAF"),
+            obs: get("OBS"),
+            doc: get("DOC"),
+            res: get("RES"),
+            cmp: get("CMP"),
+        }
     }
 }
 
@@ -123,6 +114,17 @@ impl Grade {
             "D" => Ok(Self::D),
             "F" | "" => Ok(Self::F),
             other => Err(format!("unknown grade: {other}")),
+        }
+    }
+
+    /// Convert from forjar's `char` grade.
+    const fn from_char(c: char) -> Self {
+        match c {
+            'A' => Self::A,
+            'B' => Self::B,
+            'C' => Self::C,
+            'D' => Self::D,
+            _ => Self::F,
         }
     }
 }
@@ -185,18 +187,36 @@ pub struct RuntimeData {
     pub all_resources_converged: bool,
 }
 
+impl RuntimeData {
+    /// Convert to forjar's `RuntimeData` type.
+    const fn to_forjar(&self) -> forjar::core::scoring::RuntimeData {
+        forjar::core::scoring::RuntimeData {
+            validate_pass: self.validate_pass,
+            plan_pass: self.plan_pass,
+            first_apply_pass: self.first_apply_pass,
+            second_apply_pass: self.second_apply_pass,
+            zero_changes_on_reapply: self.zero_changes,
+            hash_stable: self.hash_stable,
+            all_resources_converged: self.all_resources_converged,
+            state_lock_written: self.state_lock_written,
+            warning_count: self.warning_count,
+            changed_on_reapply: self.changed_on_reapply,
+            first_apply_ms: self.first_apply_ms,
+            second_apply_ms: self.idempotent_apply_ms,
+        }
+    }
+}
+
 // ── Scoring input ────────────────────────────────────────────────
 
-/// Combined input for scoring: recipe status, static config, raw YAML text,
+/// Combined input for scoring: recipe status, raw YAML text,
 /// performance budget, idempotency class, and optional runtime data.
 pub struct ScoringInput<'a> {
     /// Recipe qualification status.
     pub status: &'a RecipeStatus,
     /// Idempotency class from CSV.
     pub idempotency_class: &'a IdempotencyClass,
-    /// Parsed recipe config (for static analysis).
-    pub config: &'a RecipeConfig,
-    /// Raw YAML text (for comment ratio).
+    /// Raw YAML text (parsed internally by forjar).
     pub raw_yaml: &'a str,
     /// Performance budget for first apply (ms). 0 = no budget.
     pub budget_ms: u64,
@@ -204,117 +224,86 @@ pub struct ScoringInput<'a> {
     pub runtime: Option<&'a RuntimeData>,
 }
 
-// ── Scoring logic ────────────────────────────────────────────────
+// ── Scoring logic — delegates to forjar v2 ───────────────────────
 
 impl ForjarScore {
-    /// Compute the Forjar Score for a recipe.
+    /// Compute the Forjar Score by delegating to forjar's v2 scoring engine.
     #[must_use]
     pub fn compute(input: &ScoringInput<'_>) -> Self {
-        let mut penalties = Vec::new();
-
-        // Hard-fail: blocked/pending → automatic F
-        if *input.status == RecipeStatus::Blocked || *input.status == RecipeStatus::Pending {
-            return Self {
-                composite: 0,
-                grade: Grade::F,
-                dimensions: DimensionScores {
-                    cor: 0,
-                    idm: 0,
-                    prf: 0,
-                    saf: score_saf(input, &mut penalties),
-                    obs: score_obs(input),
-                    doc: score_doc(input),
-                    res: score_res(input),
-                    cmp: score_cmp(input),
-                },
-                penalties,
-                version: SCORE_VERSION.to_string(),
+        // Parse raw YAML into ForjarConfig
+        let config: forjar::core::types::ForjarConfig =
+            match serde_yaml_ng::from_str(input.raw_yaml) {
+                Ok(c) => c,
+                Err(_) => {
+                    return Self {
+                        composite: 0,
+                        grade: Grade::F,
+                        dimensions: DimensionScores {
+                            cor: 0,
+                            idm: 0,
+                            prf: 0,
+                            saf: 0,
+                            obs: 0,
+                            doc: 0,
+                            res: 0,
+                            cmp: 0,
+                        },
+                        penalties: vec![Penalty {
+                            dimension: "ALL".into(),
+                            points: 100,
+                            reason: "YAML parse failure".into(),
+                        }],
+                        version: SCORE_VERSION.to_string(),
+                    };
+                }
             };
-        }
 
-        let cor = score_cor(input, &mut penalties);
-        let idm = score_idm(input, &mut penalties);
-        let prf = score_prf(input);
-        let saf = score_saf(input, &mut penalties);
-        let obs = score_obs(input);
-        let doc = score_doc(input);
-        let res = score_res(input);
-        let cmp = score_cmp(input);
+        // Map RuntimeData to forjar's type
+        let fj_runtime = input.runtime.map(RuntimeData::to_forjar);
 
-        // Hard-fail: runtime validation/plan/apply failure
-        if let Some(rt) = input.runtime {
-            if !rt.validate_pass || !rt.plan_pass || !rt.first_apply_pass {
-                return Self {
-                    composite: 0,
-                    grade: Grade::F,
-                    dimensions: DimensionScores {
-                        cor,
-                        idm,
-                        prf,
-                        saf,
-                        obs,
-                        doc,
-                        res,
-                        cmp,
-                    },
-                    penalties,
-                    version: SCORE_VERSION.to_string(),
-                };
-            }
-        }
-
-        let dimensions = DimensionScores {
-            cor,
-            idm,
-            prf,
-            saf,
-            obs,
-            doc,
-            res,
-            cmp,
+        // Build forjar's ScoringInput
+        let fj_input = forjar::core::scoring::ScoringInput {
+            status: input.status.as_str().to_string(),
+            idempotency: input.idempotency_class.as_str().to_string(),
+            budget_ms: input.budget_ms,
+            runtime: fj_runtime,
+            raw_yaml: Some(input.raw_yaml.to_string()),
         };
 
-        let composite = compute_composite(&dimensions);
-        let grade = compute_grade(composite, dimensions.min_score());
+        // Compute via forjar v2
+        let result = forjar::core::scoring::compute(&config, &fj_input);
+
+        // Determine overall grade: min(static, runtime) or static-only
+        let grade_char = match result.runtime_grade {
+            Some(rg) => grade_min_char(result.static_grade, rg),
+            None => result.static_grade,
+        };
 
         Self {
-            composite,
-            grade,
-            dimensions,
-            penalties,
+            composite: result.composite,
+            grade: Grade::from_char(grade_char),
+            dimensions: DimensionScores::from_forjar(&result.dimensions),
+            penalties: Vec::new(),
             version: SCORE_VERSION.to_string(),
         }
     }
 }
 
-/// Weighted composite score.
-fn compute_composite(d: &DimensionScores) -> u32 {
-    let weighted = u64::from(d.cor) * u64::from(W_COR)
-        + u64::from(d.idm) * u64::from(W_IDM)
-        + u64::from(d.prf) * u64::from(W_PRF)
-        + u64::from(d.saf) * u64::from(W_SAF)
-        + u64::from(d.obs) * u64::from(W_OBS)
-        + u64::from(d.doc) * u64::from(W_DOC)
-        + u64::from(d.res) * u64::from(W_RES)
-        + u64::from(d.cmp) * u64::from(W_CMP);
-    // Weights sum to 100, so divide by 100 to get 0–100 range.
-    #[allow(clippy::cast_possible_truncation)]
-    let result = (weighted / 100) as u32;
-    result.min(MAX_POINTS)
-}
-
-/// Grade from composite + min dimension.
-const fn compute_grade(composite: u32, min_dim: u32) -> Grade {
-    if composite >= 90 && min_dim >= 80 {
-        Grade::A
-    } else if composite >= 75 && min_dim >= 60 {
-        Grade::B
-    } else if composite >= 60 && min_dim >= 40 {
-        Grade::C
-    } else if composite >= 40 {
-        Grade::D
-    } else {
-        Grade::F
+/// Minimum of two grade chars.
+fn grade_min_char(a: char, b: char) -> char {
+    let ord = |g: char| match g {
+        'A' => 4,
+        'B' => 3,
+        'C' => 2,
+        'D' => 1,
+        _ => 0,
+    };
+    match ord(a).min(ord(b)) {
+        4 => 'A',
+        3 => 'B',
+        2 => 'C',
+        1 => 'D',
+        _ => 'F',
     }
 }
 

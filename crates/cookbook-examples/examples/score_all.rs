@@ -9,8 +9,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use cookbook_qualify::{
-    ForjarScore, RecipeConfig, RecipeQualification, RecipeStatus, RuntimeData, SCORE_VERSION,
-    ScoringInput,
+    ForjarScore, RecipeQualification, RecipeStatus, RuntimeData, SCORE_VERSION, ScoringInput,
 };
 
 fn main() -> ExitCode {
@@ -79,19 +78,12 @@ fn score_recipes(recipes: &mut [RecipeQualification], recipes_dir: &Path) -> (u3
             continue;
         };
 
-        let Ok(config) = RecipeConfig::from_yaml(&raw_yaml) else {
-            eprintln!("  ERROR: recipe {} — YAML parse failed", recipe.recipe_num);
-            errors += 1;
-            continue;
-        };
-
         // Reconstruct RuntimeData from CSV for previously-qualified recipes.
         let runtime = runtime_from_csv(recipe);
         let budget_ms = parse_budget_from_yaml(&raw_yaml);
         let input = ScoringInput {
             status: &recipe.status,
             idempotency_class: &recipe.idempotency_class,
-            config: &config,
             raw_yaml: &raw_yaml,
             budget_ms,
             runtime: runtime.as_ref(),

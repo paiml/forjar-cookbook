@@ -6,7 +6,7 @@
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use cookbook_qualify::{ForjarScore, IdempotencyClass, RecipeConfig, RecipeStatus, ScoringInput};
+use cookbook_qualify::{ForjarScore, IdempotencyClass, RecipeStatus, ScoringInput};
 use cookbook_runner::{
     RecipeRunner, format_qualify_report, format_score_report, runtime_data_from_qualify, verdict,
 };
@@ -34,25 +34,22 @@ fn main() -> ExitCode {
 
     // Score the recipe with runtime data
     if let Ok(raw_yaml) = std::fs::read_to_string(&file) {
-        if let Ok(config) = RecipeConfig::from_yaml(&raw_yaml) {
-            let rt = runtime_data_from_qualify(&result);
-            let v = verdict(&result);
-            let status = if v.is_qualified() {
-                RecipeStatus::Qualified
-            } else {
-                RecipeStatus::Pending
-            };
-            let input = ScoringInput {
-                status: &status,
-                idempotency_class: &IdempotencyClass::Strong,
-                config: &config,
-                raw_yaml: &raw_yaml,
-                budget_ms: 0,
-                runtime: Some(&rt),
-            };
-            let score = ForjarScore::compute(&input);
-            eprintln!("{}", format_score_report(&score));
-        }
+        let rt = runtime_data_from_qualify(&result);
+        let v = verdict(&result);
+        let status = if v.is_qualified() {
+            RecipeStatus::Qualified
+        } else {
+            RecipeStatus::Pending
+        };
+        let input = ScoringInput {
+            status: &status,
+            idempotency_class: &IdempotencyClass::Strong,
+            raw_yaml: &raw_yaml,
+            budget_ms: 0,
+            runtime: Some(&rt),
+        };
+        let score = ForjarScore::compute(&input);
+        eprintln!("{}", format_score_report(&score));
     }
 
     let _ = std::fs::remove_dir_all(&state_dir);

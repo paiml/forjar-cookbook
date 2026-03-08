@@ -6,7 +6,7 @@
 #![allow(clippy::expect_used)]
 
 use cookbook_qualify::{
-    ForjarScore, Grade, IdempotencyClass, RecipeConfig, RecipeStatus, SCORE_VERSION, ScoringInput,
+    ForjarScore, Grade, IdempotencyClass, RecipeStatus, SCORE_VERSION, ScoringInput,
 };
 use cookbook_runner::{
     QualifyResult, QualifyVerdict, RecipeRunner, RunOutcome, format_qualify_report,
@@ -122,28 +122,54 @@ fn scoring_with_runtime_data_from_qualify() {
 
     // Use runtime data to compute a score
     let yaml = "\
+# Recipe: integration test
+# Tier: 2+3
+# Idempotency: strong
+# Budget: first_apply < 60s
 version: '1.0'
 name: test-recipe
 description: integration test recipe
+params:
+  install_dir: /opt/test
+  config_file: /etc/test.conf
+  service_name: testd
 resources:
   install-curl:
     type: package
     name: curl
+    version: '8.0'
+    tags:
+      - setup
+    resource_group: packages
+  config:
+    type: file
+    path: /etc/test.conf
+    mode: '0644'
+    owner: root
+    content: '{{ params.config_file }}'
+    tags:
+      - config
+    resource_group: config
+    depends_on:
+      - install-curl
+policy:
+  failure: continue_independent
+  deny_paths:
+    - /etc/shadow
 ";
-    let config = RecipeConfig::from_yaml(yaml).expect("parse config");
     let status = RecipeStatus::Qualified;
     let idem = IdempotencyClass::Strong;
     let input = ScoringInput {
         status: &status,
         idempotency_class: &idem,
-        config: &config,
         raw_yaml: yaml,
-        budget_ms: 0,
+        budget_ms: 60000,
         runtime: Some(&rt),
     };
     let score = ForjarScore::compute(&input);
     assert!(score.composite > 0);
-    assert_ne!(score.grade, Grade::F);
+    assert!(score.dimensions.cor > 0, "COR should score with runtime");
+    assert!(score.dimensions.saf > 0, "SAF should be non-zero");
 }
 
 // ---------- Verdict ↔ report integration ----------
@@ -225,13 +251,11 @@ resources:
     type: package
     name: vim
 ";
-    let config = RecipeConfig::from_yaml(yaml).expect("parse config");
     let status = RecipeStatus::Pending;
     let idem = IdempotencyClass::Strong;
     let input = ScoringInput {
         status: &status,
         idempotency_class: &idem,
-        config: &config,
         raw_yaml: yaml,
         budget_ms: 0,
         runtime: None,

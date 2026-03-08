@@ -11,8 +11,7 @@ mod table;
 
 pub use qualify::{IdempotencyClass, RecipeQualification, RecipeStatus};
 pub use score::{
-    DimensionScores, ForjarScore, Grade, Penalty, RecipeConfig, RuntimeData, SCORE_VERSION,
-    ScoringInput,
+    DimensionScores, ForjarScore, Grade, Penalty, RuntimeData, SCORE_VERSION, ScoringInput,
 };
 pub use sync::{find_project_root, run_readme_sync, sync_readme};
 pub use table::{

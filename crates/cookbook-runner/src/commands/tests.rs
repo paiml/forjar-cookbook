@@ -6,23 +6,19 @@ use cookbook_qualify::Grade;
 
 fn sample_yaml() -> &'static str {
     "\
-# Recipe #1: Test Recipe
+# Recipe: Test Recipe
 # Tier: 2+3
 # Idempotency: Strong
 version: '1.0'
 name: test-recipe
 description: A test recipe
-machines:
-  target:
-    hostname: target
-    addr: localhost
 resources:
   my-file:
     type: file
-    machine: target
-    dest: /tmp/test
+    path: /tmp/test
     mode: '0644'
     owner: root
+    content: hello
 "
 }
 
@@ -50,8 +46,11 @@ fn score_recipe_file_pending() {
 
     let (report, score) =
         score_recipe_file(&yaml_path, "pending", "strong", 0).expect("score should succeed");
-    assert_eq!(score.grade, Grade::F);
-    assert_eq!(score.composite, 0);
+    // v2: pending recipes get a real static grade, not automatic F
+    assert!(
+        score.dimensions.saf > 0,
+        "SAF should be computed for pending"
+    );
     assert!(report.contains("grade"));
 }
 
@@ -85,8 +84,11 @@ fn score_recipe_file_invalid_yaml() {
     let yaml_path = dir.path().join("recipe.yaml");
     std::fs::write(&yaml_path, "{{invalid yaml!!").expect("write");
 
-    let result = score_recipe_file(&yaml_path, "pending", "strong", 0);
-    assert!(result.is_err());
+    // v2: invalid YAML is handled inside compute(), returns F grade
+    let (_, score) =
+        score_recipe_file(&yaml_path, "pending", "strong", 0).expect("should return Ok");
+    assert_eq!(score.grade, Grade::F);
+    assert_eq!(score.composite, 0);
 }
 
 #[test]
@@ -182,7 +184,8 @@ fn score_after_qualify_failed_validate() {
 
     let (_, score) = score_after_qualify(&yaml_path, &result)
         .expect("scoring should succeed even on failed qualify");
-    assert_eq!(score.grade, Grade::F);
+    // v2: pending recipes get real static grade, not automatic F
+    assert!(score.dimensions.saf > 0);
 }
 
 #[test]
@@ -198,8 +201,10 @@ fn score_after_qualify_invalid_yaml() {
         idempotent_apply: None,
         idempotent: false,
     };
-    let out = score_after_qualify(&yaml_path, &result);
-    assert!(out.is_none());
+    // v2: invalid YAML is handled inside compute(), returns F grade
+    let (_, score) = score_after_qualify(&yaml_path, &result)
+        .expect("should return Some — compute handles bad YAML");
+    assert_eq!(score.grade, Grade::F);
 }
 
 /// Path to a binary that always succeeds (no script creation needed).

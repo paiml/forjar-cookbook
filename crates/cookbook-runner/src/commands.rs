@@ -2,9 +2,7 @@
 
 use std::path::Path;
 
-use cookbook_qualify::{
-    ForjarScore, Grade, IdempotencyClass, RecipeConfig, RecipeStatus, ScoringInput,
-};
+use cookbook_qualify::{ForjarScore, Grade, IdempotencyClass, RecipeStatus, ScoringInput};
 
 use crate::{
     QualifyResult, RecipeRunner, format_qualify_report, format_score_report,
@@ -68,13 +66,11 @@ pub fn score_recipe_file(
 ) -> Result<(String, ForjarScore), String> {
     let raw_yaml = std::fs::read_to_string(file)
         .map_err(|e| format!("cannot read {}: {e}", file.display()))?;
-    let config = RecipeConfig::from_yaml(&raw_yaml)?;
     let recipe_status = RecipeStatus::from_csv(status)?;
     let idem_class = IdempotencyClass::from_csv(idempotency)?;
     let input = ScoringInput {
         status: &recipe_status,
         idempotency_class: &idem_class,
-        config: &config,
         raw_yaml: &raw_yaml,
         budget_ms,
         runtime: None,
@@ -97,7 +93,6 @@ pub const fn grade_passes_threshold(grade: &Grade) -> bool {
 #[must_use]
 pub fn score_after_qualify(file: &Path, result: &QualifyResult) -> Option<(String, ForjarScore)> {
     let raw_yaml = std::fs::read_to_string(file).ok()?;
-    let config = RecipeConfig::from_yaml(&raw_yaml).ok()?;
     let rt = runtime_data_from_qualify(result);
     let v = verdict(result);
     let status = if v.is_qualified() {
@@ -108,7 +103,6 @@ pub fn score_after_qualify(file: &Path, result: &QualifyResult) -> Option<(Strin
     let input = ScoringInput {
         status: &status,
         idempotency_class: &IdempotencyClass::Strong,
-        config: &config,
         raw_yaml: &raw_yaml,
         budget_ms: 0,
         runtime: Some(&rt),

@@ -244,7 +244,7 @@ fn score_report_shows_grade() {
             cmp: 35,
         },
         penalties: vec![],
-        version: "1.0".to_string(),
+        version: "2.0".to_string(),
     };
     let report = format_score_report(&score);
     assert!(report.contains("score: 83 (grade B)"));
@@ -324,7 +324,7 @@ fn score_report_shows_penalties() {
             points: 5,
             reason: "file without explicit mode".to_string(),
         }],
-        version: "1.0".to_string(),
+        version: "2.0".to_string(),
     };
     let report = format_score_report(&score);
     assert!(report.contains("penalties: 1"));
