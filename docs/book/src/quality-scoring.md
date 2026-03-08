@@ -59,4 +59,4 @@ To achieve static grade A, ensure:
 
 ## Current Scores
 
-All 56 qualified recipes hold **A-grade** runtime scores. The 11 newest recipes (88-98) have static A-grade with runtime pending.
+56 qualified recipes hold **B-grade** (composite 80-89, min dimension RES=61 or CMP=65). The 5 blocked recipes score C-grade static-only (36-41). The 11 pending recipes (88-98) score C/D-grade static-only (32-41) with runtime pending.

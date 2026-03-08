@@ -190,15 +190,22 @@ This produces a combined report:
 ## Recipe Qualification
 
 Every cookbook recipe must pass all three testing modes before
-qualification. The scorer checks:
+qualification. The v2 scorer computes two tiers:
 
-- COR (20%): Convergence and idempotency
-- IDM (20%): Idempotent apply (zero changes on second run)
-- PRF (15%): Performance within budget
-- SAF (15%): No unsafe patterns (curl|bash, chmod 777)
-- OBS (10%): Observability hooks (on_success, on_failure)
+**Static dimensions** (design quality, always available):
+- SAF (25%): No unsafe patterns (curl|bash, chmod 777, missing mode/owner)
+- OBS (20%): Tripwire, lock_file, outputs, notify hooks
+- DOC (15%): Header metadata, unique comments, descriptions
+- RES (20%): Failure policy, dependency DAG, deny_paths
+- CMP (20%): Params, templates, includes, tags, resource_groups
 
-Recipes that pass all quality gates receive an A grade.
+**Runtime dimensions** (operational quality, after qualification):
+- COR (35%): Convergence and all resources converged
+- IDM (35%): Idempotent apply (zero changes on second run)
+- PRF (30%): Performance within budget, fast idempotent re-apply
+
+Overall grade = min(static, runtime). Recipes that pass all quality
+gates and have min dimension ≥ 80 receive an A grade.
 
 ## CI Integration
 

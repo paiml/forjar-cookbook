@@ -65,33 +65,40 @@ cookbook-runner score    --file <recipe.yaml>      # Static-only analysis
 The `score` command analyzes SAF/OBS/DOC/RES/CMP without running apply.
 The `qualify` command runs the full cycle and computes all 8 dimensions.
 
-## Forjar Score
+## Forjar Score (v2)
 
-Every qualified recipe receives a **Forjar Score** — a multi-dimensional quality grade from A through F.
+Every recipe receives a **Forjar Score** — a two-tier quality grade. Pending and blocked recipes get a static-only grade; qualified recipes get both static and runtime grades.
 
-### Dimensions
+### Static Dimensions (Always Available)
 
 | Code | Weight | What It Measures |
 |------|--------|------------------|
-| COR | 20% | Converges from clean state, all resources converged |
-| IDM | 20% | Zero changes on re-apply, stable state hashes |
-| PRF | 15% | Within time budget, fast idempotent re-apply |
-| SAF | 15% | No dangerous patterns (0777, curl\|bash, missing mode/owner) |
-| OBS | 10% | Tripwire, lock file, outputs, notify hooks, mode/owner coverage |
-| DOC | 8% | Comment ratio, header metadata, description field |
-| RES | 7% | Failure policy, dependency DAG ratio, lifecycle hooks |
-| CMP | 5% | Params, templates, includes, tags, resource groups |
+| SAF | 25% | Explicit modes/owners, version pins, no curl\|bash, no plaintext secrets |
+| OBS | 20% | Tripwire, lock_file, outputs, notify hooks |
+| DOC | 15% | Header metadata, unique comments, descriptions |
+| RES | 20% | Failure policy, DAG or tagged independence, deny_paths |
+| CMP | 20% | Params, templates, includes, tags, resource_groups |
+
+### Runtime Dimensions (After Qualification)
+
+| Code | Weight | What It Measures |
+|------|--------|------------------|
+| COR | 35% | Validate + plan + apply + convergence |
+| IDM | 35% | Second apply zero-change + hash stability |
+| PRF | 30% | Apply time vs budget, idempotent apply ≤ 2s |
 
 ### Grades
 
 | Grade | Composite | Min Dimension | Meaning |
 |-------|-----------|---------------|---------|
-| A | >= 90 | >= 80 | Production-hardened |
-| B | >= 75 | >= 60 | Solid, minor gaps |
-| C | >= 60 | >= 40 | Functional but rough |
-| D | >= 40 | any | Bare minimum |
-| F | < 40 | any | Blocked or never-qualified |
+| A | ≥ 90 | ≥ 80 | Production-hardened |
+| B | ≥ 75 | ≥ 60 | Solid, minor gaps |
+| C | ≥ 60 | ≥ 40 | Functional but rough |
+| D | ≥ 40 | — | Bare minimum |
+| F | < 40 | — | Blocked or never-qualified |
+
+Overall grade = `min(static_grade, runtime_grade)`. Format: `B/A` (static B, runtime A), `A/pending` (runtime not yet tested).
 
 ### Current Status
 
-All 56 qualified recipes achieve **A-grade** (score 90-95, all dimensions >= 80).
+56 qualified recipes hold **B-grade** (composite 80-89). The 11 pending recipes (88-98) have static grades with runtime pending.
