@@ -23,5 +23,6 @@
   - [Networking & VPN](./recipes/networking.md)
   - [High Availability](./recipes/high-availability.md)
   - [Platform Dogfood](./recipes/platform-dogfood.md)
+- [Quality Scoring](./quality-scoring.md)
 - [Runner Setup](./runner-setup.md)
 - [Troubleshooting](./troubleshooting.md)
