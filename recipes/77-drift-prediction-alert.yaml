@@ -1,0 +1,73 @@
+# Recipe: 77-drift-prediction-alert
+# Tier: 1+2 (validate + container plan; tests drift prediction)
+# Idempotency: strong (file content convergence)
+# Budget: first_apply < 15s, idempotent < 1s
+#
+# Drift prediction monitoring: analyze event logs and alert on
+# high-risk resources that are likely to drift.
+# Refs: GH-5
+
+version: '1.0'
+name: drift-prediction-alert
+description: "Drift prediction monitoring — alert on high-risk resources"
+
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
+params:
+  state_dir: /var/lib/forjar/state
+  alert_threshold: "0.7"
+  limit: "10"
+
+machines:
+  target:
+    hostname: target
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-77-drift
+      ephemeral: false
+      privileged: false
+      init: true
+
+resources:
+  # Ensure state directory exists
+  state-dir:
+    type: file
+    machine: target
+    path: "{{params.state_dir}}"
+    content: ""
+    check: "test -d {{params.state_dir}}"
+    apply: "mkdir -p {{params.state_dir}}"
+
+  # Create synthetic event log for testing
+  event-log:
+    type: file
+    machine: target
+    path: "{{params.state_dir}}/events.jsonl"
+    content: |
+      {"resource":"nginx-conf","machine":"web","action":"drift","timestamp":1000.0}
+      {"resource":"nginx-conf","machine":"web","action":"drift","timestamp":2000.0}
+      {"resource":"nginx-conf","machine":"web","action":"apply","timestamp":3000.0}
+      {"resource":"postgres-conf","machine":"db","action":"apply","timestamp":1000.0}
+    depends_on: [state-dir]
+
+  # Run drift prediction
+  drift-predict:
+    type: task
+    machine: target
+    command: "forjar drift-predict --state-dir {{params.state_dir}} --limit {{params.limit}} --json"
+    depends_on: [event-log]
+
+  # Alert check: fail if any high-risk predictions
+  drift-alert-check:
+    type: task
+    machine: target
+    command: "forjar drift-predict --state-dir {{params.state_dir}} --json"
+    depends_on: [event-log]
+    check: "forjar drift-predict --state-dir {{params.state_dir}} --json | grep -q '\"high_risk\":0'"

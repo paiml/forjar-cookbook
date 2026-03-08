@@ -84,18 +84,31 @@ pub fn parse_csv(content: &str) -> Result<Vec<RecipeQualification>, String> {
         let first_apply_ms = parse_optional_u64(&record, 6, line_num)?;
         let idempotent_apply_ms = parse_optional_u64(&record, 7, line_num)?;
 
-        // Extended fields (columns 12–22), default to 0/empty if missing
+        // Extended fields, default to 0/empty if missing.
+        // Support both 23-column (legacy) and 25-column (v2) formats.
         let score = parse_optional_u32(&record, 12, line_num)?;
         let grade = parse_optional_str(&record, 13);
-        let cor = parse_optional_u32(&record, 14, line_num)?;
-        let idm = parse_optional_u32(&record, 15, line_num)?;
-        let prf = parse_optional_u32(&record, 16, line_num)?;
-        let saf = parse_optional_u32(&record, 17, line_num)?;
-        let obs = parse_optional_u32(&record, 18, line_num)?;
-        let doc = parse_optional_u32(&record, 19, line_num)?;
-        let res = parse_optional_u32(&record, 20, line_num)?;
-        let cmp = parse_optional_u32(&record, 21, line_num)?;
-        let score_version = parse_optional_str(&record, 22);
+
+        // Detect format: 25-column has static_grade/runtime_grade at 14-15
+        let (static_grade, runtime_grade, dim_offset) = if record.len() >= 25 {
+            (
+                parse_optional_str(&record, 14),
+                parse_optional_str(&record, 15),
+                16,
+            )
+        } else {
+            (String::new(), String::new(), 14)
+        };
+
+        let cor = parse_optional_u32(&record, dim_offset, line_num)?;
+        let idm = parse_optional_u32(&record, dim_offset + 1, line_num)?;
+        let prf = parse_optional_u32(&record, dim_offset + 2, line_num)?;
+        let saf = parse_optional_u32(&record, dim_offset + 3, line_num)?;
+        let obs = parse_optional_u32(&record, dim_offset + 4, line_num)?;
+        let doc = parse_optional_u32(&record, dim_offset + 5, line_num)?;
+        let res = parse_optional_u32(&record, dim_offset + 6, line_num)?;
+        let cmp = parse_optional_u32(&record, dim_offset + 7, line_num)?;
+        let score_version = parse_optional_str(&record, dim_offset + 8);
 
         recipes.push(RecipeQualification {
             recipe_num,
@@ -112,6 +125,8 @@ pub fn parse_csv(content: &str) -> Result<Vec<RecipeQualification>, String> {
             qualified_by: record[11].to_string(),
             score,
             grade,
+            static_grade,
+            runtime_grade,
             cor,
             idm,
             prf,
@@ -258,11 +273,11 @@ fn fmt_optional_u32(val: u32) -> String {
     }
 }
 
-/// CSV header for the 23-column format.
+/// CSV header for the 25-column format.
 const CSV_HEADER: &str = "recipe_num,name,category,status,tier,idempotency_class,\
 first_apply_ms,idempotent_apply_ms,blocker_ticket,\
 blocker_description,last_qualified,qualified_by,\
-score,grade,cor,idm,prf,saf,obs,doc,res,cmp,score_version";
+score,grade,static_grade,runtime_grade,cor,idm,prf,saf,obs,doc,res,cmp,score_version";
 
 /// Serialize recipes back to CSV (23-column format).
 #[must_use]
@@ -285,7 +300,7 @@ pub fn write_csv(recipes: &[RecipeQualification]) -> String {
             r.idempotent_apply_ms.to_string()
         };
         lines.push(format!(
-            "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}",
+            "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}",
             r.recipe_num,
             r.name,
             r.category,
@@ -300,6 +315,8 @@ pub fn write_csv(recipes: &[RecipeQualification]) -> String {
             r.qualified_by,
             fmt_optional_u32(r.score),
             r.grade,
+            r.static_grade,
+            r.runtime_grade,
             fmt_optional_u32(r.cor),
             fmt_optional_u32(r.idm),
             fmt_optional_u32(r.prf),

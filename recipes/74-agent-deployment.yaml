@@ -1,0 +1,192 @@
+# Recipe: 74-agent-deployment
+# Tier: 1+2 (validate + container apply)
+# Idempotency: strong
+# Budget: first_apply < 60s, idempotent < 5s
+#
+# Composable agent deployment recipe.
+# Layers: Model download → GPU config → Agent config → MCP server → Health check.
+# Parameterized for any model/GPU combination.
+
+version: '1.0'
+name: agent-deployment
+description: "Composable LLM agent deployment — model, GPU, config, MCP, health"
+
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
+params:
+  agent_name: default-agent
+  model_name: llama-3.1-8b
+  model_format: gguf
+  model_cache_dir: /var/lib/models
+  gpu_backend: cpu
+  mcp_port: "8766"
+  mcp_host: "127.0.0.1"
+  agent_config_dir: /etc/forjar/agents
+  log_level: info
+
+machines:
+  target:
+    hostname: target
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-74-agent
+      ephemeral: false
+      privileged: false
+      init: true
+
+resources:
+  # --- Layer 1: Base packages ---
+  agent-packages:
+    type: package
+    machine: target
+    provider: apt
+    packages:
+      - curl
+      - jq
+    state: present
+    tags:
+      - base
+      - agent
+
+  # --- Layer 2: Model cache directory ---
+  model-cache-dir:
+    type: file
+    machine: target
+    path: "{{params.model_cache_dir}}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+    depends_on:
+      - agent-packages
+    tags:
+      - model
+      - agent
+
+  # --- Layer 3: Agent configuration ---
+  agent-config-dir:
+    type: file
+    machine: target
+    path: "{{params.agent_config_dir}}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+    depends_on:
+      - agent-packages
+    tags:
+      - configuration
+      - agent
+
+  agent-config:
+    type: file
+    machine: target
+    path: "{{params.agent_config_dir}}/{{params.agent_name}}.yaml"
+    content: |
+      # Agent configuration: {{params.agent_name}}
+      agent:
+        name: "{{params.agent_name}}"
+        model:
+          name: "{{params.model_name}}"
+          format: "{{params.model_format}}"
+          cache_dir: "{{params.model_cache_dir}}"
+        gpu:
+          backend: "{{params.gpu_backend}}"
+        mcp:
+          host: "{{params.mcp_host}}"
+          port: {{params.mcp_port}}
+        logging:
+          level: "{{params.log_level}}"
+    owner: root
+    group: root
+    mode: "0644"
+    depends_on:
+      - agent-config-dir
+      - model-cache-dir
+    tags:
+      - configuration
+      - agent
+
+  # --- Layer 4: MCP integration config ---
+  mcp-tools-config:
+    type: file
+    machine: target
+    path: "{{params.agent_config_dir}}/mcp-tools.yaml"
+    content: |
+      # MCP tools available to the agent
+      tools:
+        infrastructure:
+          - apply
+          - plan
+          - drift
+          - status
+          - explain
+          - state-list
+          - state-reconstruct
+        read_only:
+          - show
+          - output
+          - graph
+          - inventory
+    owner: root
+    group: root
+    mode: "0644"
+    depends_on:
+      - agent-config-dir
+    tags:
+      - mcp
+      - agent
+
+  # --- Layer 5: Health check ---
+  agent-health-check:
+    type: task
+    machine: target
+    script: |
+      #!/bin/bash
+      set -euo pipefail
+      # Verify config exists
+      test -f {{params.agent_config_dir}}/{{params.agent_name}}.yaml
+      # Verify MCP tools config exists
+      test -f {{params.agent_config_dir}}/mcp-tools.yaml
+      # Verify model cache directory exists
+      test -d {{params.model_cache_dir}}
+    depends_on:
+      - agent-config
+      - mcp-tools-config
+    tags:
+      - health
+      - agent
+
+outputs:
+  agent_name:
+    value: "{{params.agent_name}}"
+    description: "Deployed agent name"
+  model:
+    value: "{{params.model_name}}"
+    description: "Model used by the agent"
+  gpu_backend:
+    value: "{{params.gpu_backend}}"
+    description: "GPU backend (nvidia, rocm, cpu)"
+  config_path:
+    value: "{{params.agent_config_dir}}/{{params.agent_name}}.yaml"
+    description: "Agent configuration file path"
+  mcp_endpoint:
+    value: "{{params.mcp_host}}:{{params.mcp_port}}"
+    description: "MCP server endpoint"
+
+checks:
+  agent-config-valid:
+    machine: target
+    command: "test -f {{params.agent_config_dir}}/{{params.agent_name}}.yaml"
+    description: "Agent configuration file exists"
+  model-cache-ready:
+    machine: target
+    command: "test -d {{params.model_cache_dir}}"
+    description: "Model cache directory is ready"

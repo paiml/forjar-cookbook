@@ -1,0 +1,71 @@
+# Recipe: 75-complexity-gate
+# Tier: 1+2 (validate + container plan; tests complexity gating)
+# Idempotency: strong (file content convergence)
+# Budget: first_apply < 15s, idempotent < 1s
+#
+# Pre-apply complexity gate: validates that config complexity stays
+# within acceptable bounds before allowing apply to proceed.
+# Refs: GH-5
+
+version: '1.0'
+name: complexity-gate
+description: "Pre-apply complexity gate — fail if config exceeds Grade C"
+
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
+params:
+  config_path: /etc/forjar/production.yaml
+  max_grade: C
+  state_dir: /var/lib/forjar/state
+
+machines:
+  target:
+    hostname: target
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-75-complexity
+      ephemeral: false
+      privileged: false
+      init: true
+
+resources:
+  # Write a sample config to analyze
+  sample-config:
+    type: file
+    machine: target
+    path: "{{params.config_path}}"
+    content: |
+      version: "1.0"
+      name: production
+      machines:
+        web:
+          hostname: web
+          addr: 10.0.0.1
+      resources:
+        pkg:
+          type: package
+          machine: web
+          provider: apt
+          packages: [nginx]
+
+  # Run complexity analysis as a gate
+  complexity-gate:
+    type: task
+    machine: target
+    command: "forjar complexity -f {{params.config_path}} --json"
+    depends_on: [sample-config]
+    check: "forjar complexity -f {{params.config_path}} --json | grep -q '\"grade\":\"[ABC]\"'"
+
+  # Run impact analysis on key resources
+  impact-check:
+    type: task
+    machine: target
+    command: "forjar impact -f {{params.config_path}} -r pkg --json"
+    depends_on: [sample-config]

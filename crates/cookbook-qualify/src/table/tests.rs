@@ -299,7 +299,9 @@ fn write_csv_has_23col_header() {
     let recipes = parse_csv(SAMPLE_CSV_12).unwrap_or_default();
     let output = write_csv(&recipes);
     assert!(output.starts_with("recipe_num,name,category,status,"));
-    assert!(output.contains("score,grade,cor,idm,prf,saf,obs,doc,res,cmp,score_version"));
+    assert!(output.contains(
+        "score,grade,static_grade,runtime_grade,cor,idm,prf,saf,obs,doc,res,cmp,score_version"
+    ));
 }
 
 #[test]

@@ -145,8 +145,12 @@ pub struct Penalty {
 pub struct ForjarScore {
     /// Composite score (0–100).
     pub composite: u32,
-    /// Letter grade.
+    /// Overall letter grade — `min(static, runtime)`.
     pub grade: Grade,
+    /// Static grade (design quality).
+    pub static_grade: Grade,
+    /// Runtime grade (operational quality), or `None` if not yet qualified.
+    pub runtime_grade: Option<Grade>,
     /// Per-dimension breakdown.
     pub dimensions: DimensionScores,
     /// Penalties applied during scoring.
@@ -238,6 +242,8 @@ impl ForjarScore {
                     return Self {
                         composite: 0,
                         grade: Grade::F,
+                        static_grade: Grade::F,
+                        runtime_grade: None,
                         dimensions: DimensionScores {
                             cor: 0,
                             idm: 0,
@@ -282,6 +288,8 @@ impl ForjarScore {
         Self {
             composite: result.composite,
             grade: Grade::from_char(grade_char),
+            static_grade: Grade::from_char(result.static_grade),
+            runtime_grade: result.runtime_grade.map(Grade::from_char),
             dimensions: DimensionScores::from_forjar(&result.dimensions),
             penalties: Vec::new(),
             version: SCORE_VERSION.to_string(),

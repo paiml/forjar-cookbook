@@ -132,6 +132,8 @@ fn recipe_qualification_serde_roundtrip() {
         qualified_by: "cookbook-runner".to_string(),
         score: 83,
         grade: "B".to_string(),
+        static_grade: "B".to_string(),
+        runtime_grade: "A".to_string(),
         cor: 100,
         idm: 100,
         prf: 85,

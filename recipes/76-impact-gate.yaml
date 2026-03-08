@@ -1,0 +1,79 @@
+# Recipe: 76-impact-gate
+# Tier: 1+2 (validate + container plan; tests impact analysis gating)
+# Idempotency: strong (file content convergence)
+# Budget: first_apply < 15s, idempotent < 1s
+#
+# Pre-apply impact analysis gate: validates that no single resource
+# change has critical blast radius before allowing apply.
+# Refs: GH-5
+
+version: '1.0'
+name: impact-gate
+description: "Pre-apply impact analysis gate — fail if any resource has critical blast radius"
+
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
+params:
+  config_path: /etc/forjar/multi-machine.yaml
+  max_risk: high
+
+machines:
+  target:
+    hostname: target
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-76-impact
+      ephemeral: false
+      privileged: false
+      init: true
+
+resources:
+  # Write a multi-machine config to analyze
+  multi-config:
+    type: file
+    machine: target
+    path: "{{params.config_path}}"
+    content: |
+      version: "1.0"
+      name: multi-machine
+      machines:
+        web:
+          hostname: web
+          addr: 10.0.0.1
+        db:
+          hostname: db
+          addr: 10.0.0.2
+      resources:
+        db-pkg:
+          type: package
+          machine: db
+          provider: apt
+          packages: [postgresql]
+        web-conf:
+          type: file
+          machine: web
+          path: /etc/app/db.conf
+          content: "host=10.0.0.2"
+          depends_on: [db-pkg]
+
+  # Analyze impact of changing the database package
+  impact-db:
+    type: task
+    machine: target
+    command: "forjar impact -f {{params.config_path}} -r db-pkg --json"
+    depends_on: [multi-config]
+    check: "forjar impact -f {{params.config_path}} -r db-pkg --json | grep -vq '\"risk\":\"critical\"'"
+
+  # Analyze impact of changing the web config (should be safe)
+  impact-web:
+    type: task
+    machine: target
+    command: "forjar impact -f {{params.config_path}} -r web-conf --json"
+    depends_on: [multi-config]

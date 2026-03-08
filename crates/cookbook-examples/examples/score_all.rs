@@ -117,6 +117,11 @@ fn score_recipes(recipes: &mut [RecipeQualification], recipes_dir: &Path) -> (u3
 fn apply_score(recipe: &mut RecipeQualification, score: &ForjarScore) {
     recipe.score = score.composite;
     recipe.grade = score.grade.as_str().to_string();
+    recipe.static_grade = score.static_grade.as_str().to_string();
+    recipe.runtime_grade = score
+        .runtime_grade
+        .as_ref()
+        .map_or_else(|| "pending".to_string(), |g| g.as_str().to_string());
     recipe.cor = score.dimensions.cor;
     recipe.idm = score.dimensions.idm;
     recipe.prf = score.dimensions.prf;

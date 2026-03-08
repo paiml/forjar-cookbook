@@ -117,8 +117,12 @@ pub struct RecipeQualification {
     pub qualified_by: String,
     /// Forjar composite score (0–100, 0 = not scored).
     pub score: u32,
-    /// Letter grade (A/B/C/D/F, empty = not scored).
+    /// Letter grade — overall min(static, runtime) (A/B/C/D/F, empty = not scored).
     pub grade: String,
+    /// Static grade (design quality, always available).
+    pub static_grade: String,
+    /// Runtime grade (operational quality, "pending" if not qualified).
+    pub runtime_grade: String,
     /// Correctness dimension (0–100).
     pub cor: u32,
     /// Idempotency dimension (0–100).

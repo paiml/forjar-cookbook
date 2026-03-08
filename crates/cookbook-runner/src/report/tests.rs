@@ -233,6 +233,8 @@ fn score_report_shows_grade() {
     let score = cookbook_qualify::ForjarScore {
         composite: 83,
         grade: cookbook_qualify::Grade::B,
+        static_grade: cookbook_qualify::Grade::B,
+        runtime_grade: Some(cookbook_qualify::Grade::A),
         dimensions: cookbook_qualify::DimensionScores {
             cor: 100,
             idm: 100,
@@ -309,6 +311,8 @@ fn score_report_shows_penalties() {
     let score = cookbook_qualify::ForjarScore {
         composite: 70,
         grade: cookbook_qualify::Grade::C,
+        static_grade: cookbook_qualify::Grade::C,
+        runtime_grade: Some(cookbook_qualify::Grade::C),
         dimensions: cookbook_qualify::DimensionScores {
             cor: 94,
             idm: 80,
