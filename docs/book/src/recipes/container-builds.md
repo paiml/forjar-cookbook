@@ -155,6 +155,25 @@ Layer types:
 - **Build**: Command output captured as layer
 - **Derivation**: Nix-style store path export
 
+## Automatic Layer Splitting (E13)
+
+Forjar separates config files from binaries into distinct OCI layers.
+Config files (`.yaml`, `.toml`, `.json`, `.conf`, `.cfg`, `.ini`,
+`.env`, `.properties`) go to a top layer; binaries go to a lower layer.
+Only the changed layer needs uploading on push.
+
+## Parallel Layer Building (E18)
+
+Multi-layer images build concurrently using `std::thread::scope`.
+Each layer's tar creation and gzip compression runs in parallel.
+Single-layer images skip thread overhead.
+
+## Chunked Registry Push (E14)
+
+Blobs under 64 MB use monolithic PUT. Blobs >= 64 MB use OCI chunked
+upload protocol: 16 MB PATCH chunks with `Content-Range` headers,
+following `Location` between chunks, finalized with PUT + digest.
+
 ## Build Caching (E16)
 
 Forjar caches image builds based on BLAKE3 input hashing. On rebuild, if
