@@ -90,6 +90,60 @@ state/intel/runs/run-20260307-143022-a1b2/
   cargo-tools.script
 ```
 
+## Lint Rules
+
+Forjar's lint engine detects common anti-patterns in recipe YAML.
+
+### Semicolon-chained commands (FJ-3000)
+
+```yaml
+# BAD: semicolons mask exit codes
+command: "cd /app ; make build ; make install"
+
+# GOOD: && fails fast
+command: "cd /app && make build && make install"
+
+# GOOD: multiline block
+command: |
+  cd /app
+  make build
+  make install
+```
+
+### nohup without LD_LIBRARY_PATH (FJ-3030)
+
+```yaml
+# WARNS: binary may fail to find shared libraries
+command: "nohup /opt/llama/llama-server --port 8080 &"
+
+# FIXED: set LD_LIBRARY_PATH before nohup
+command: "LD_LIBRARY_PATH=/opt/llama nohup /opt/llama/llama-server --port 8080 &"
+```
+
+### nohup + sleep + health check race (FJ-3040)
+
+```yaml
+# BAD: fixed sleep is fragile
+command: "nohup /opt/server & sleep 15; curl http://localhost:8080/health"
+
+# GOOD: use task_mode: service with health_check
+task_mode: service
+command: "/opt/server --port 8080"
+health_check:
+  command: "curl -sf http://localhost:8080/health"
+  retries: 10
+  timeout: "5s"
+```
+
+### Running the linter
+
+```bash
+forjar lint -f recipe.yaml              # human-readable output
+forjar lint -f recipe.yaml --json       # JSON output for CI
+forjar lint -f recipe.yaml --strict     # additional strict rules
+forjar lint -f recipe.yaml --fix        # auto-fix (resource key sorting)
+```
+
 ## Build Issues
 
 ### "cargo test fails"
