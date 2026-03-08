@@ -1,0 +1,196 @@
+# Recipe: 94-canary-deployment
+# Tier: 2+3 (container validate + bare-metal apply)
+# Idempotency: strong
+# Budget: first_apply < 30s, idempotent < 2s
+#
+# Canary/blue-green deployment with health gate. Two application slots
+# behind nginx, health-gated traffic switching, automated rollback.
+
+version: '1.0'
+name: canary-deployment
+description: "Canary/blue-green deployment — health gate, traffic switch, rollback"
+
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
+params:
+  app_name: myapp
+  health_endpoint: "/healthz"
+  health_threshold: "3"
+  blue_port: "8001"
+  green_port: "8002"
+  deploy_dir: /opt/deploy
+
+machines:
+  deploy-host:
+    hostname: deploy-host
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-94-canary
+      ephemeral: false
+      privileged: false
+      init: true
+
+resources:
+  # ── Deployment Directory ──
+  deploy-dir:
+    type: file
+    machine: deploy-host
+    path: "{{params.deploy_dir}}"
+    state: directory
+    owner: root
+    mode: '0755'
+    tags: [deploy, prereq]
+    resource_group: canary-infra
+
+  # ── Blue Slot Configuration ──
+  blue-config:
+    type: file
+    machine: deploy-host
+    path: "{{params.deploy_dir}}/blue.env"
+    owner: root
+    mode: '0644'
+    content: |
+      # Managed by forjar — blue slot
+      SLOT=blue
+      APP_NAME={{params.app_name}}
+      PORT={{params.blue_port}}
+      HEALTH_ENDPOINT={{params.health_endpoint}}
+    depends_on: [deploy-dir]
+    tags: [deploy, blue, config]
+    resource_group: canary-slots
+
+  # ── Green Slot Configuration ──
+  green-config:
+    type: file
+    machine: deploy-host
+    path: "{{params.deploy_dir}}/green.env"
+    owner: root
+    mode: '0644'
+    content: |
+      # Managed by forjar — green slot
+      SLOT=green
+      APP_NAME={{params.app_name}}
+      PORT={{params.green_port}}
+      HEALTH_ENDPOINT={{params.health_endpoint}}
+    depends_on: [deploy-dir]
+    tags: [deploy, green, config]
+    resource_group: canary-slots
+
+  # ── Nginx Backend Configuration ──
+  nginx-backend:
+    type: file
+    machine: deploy-host
+    path: /etc/nginx/conf.d/{{params.app_name}}-canary.conf
+    owner: root
+    mode: '0644'
+    content: |
+      # Managed by forjar — canary nginx config
+      upstream {{params.app_name}}_blue  { server 127.0.0.1:{{params.blue_port}}; }
+      upstream {{params.app_name}}_green { server 127.0.0.1:{{params.green_port}}; }
+      server {
+          listen 80;
+          server_name _;
+          location / { include /etc/nginx/conf.d/active-slot.conf; }
+          location {{params.health_endpoint}} { return 200 'ok'; }
+      }
+    depends_on: [blue-config, green-config]
+    tags: [deploy, nginx, config]
+    resource_group: canary-infra
+
+  # ── Health Gate Script ──
+  health-gate:
+    type: file
+    machine: deploy-host
+    path: "{{params.deploy_dir}}/health-gate.sh"
+    owner: root
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      SLOT="${1:-green}"
+      PORT=$( [ "$SLOT" = "blue" ] && echo "{{params.blue_port}}" || echo "{{params.green_port}}" )
+      for i in $(seq 1 {{params.health_threshold}}); do
+        curl -sf --max-time 5 "http://127.0.0.1:${PORT}{{params.health_endpoint}}" >/dev/null
+        echo "Check $i/{{params.health_threshold}}: PASS"
+        sleep 1
+      done
+      echo "Health gate PASSED — $SLOT healthy"
+    depends_on: [nginx-backend]
+    tags: [deploy, health, gate]
+    resource_group: canary-gate
+
+  # ── Traffic Switch Script ──
+  traffic-switch:
+    type: file
+    machine: deploy-host
+    path: "{{params.deploy_dir}}/traffic-switch.sh"
+    owner: root
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      SLOT="${1:-green}"
+      echo "proxy_pass http://{{params.app_name}}_${SLOT};" \
+        > /etc/nginx/conf.d/active-slot.conf
+      echo "$SLOT" > "{{params.deploy_dir}}/active-slot"
+      nginx -t && nginx -s reload
+      echo "Traffic switched to $SLOT"
+    depends_on: [health-gate]
+    tags: [deploy, switch, traffic]
+    resource_group: canary-gate
+
+  # ── Rollback Script ──
+  rollback-script:
+    type: file
+    machine: deploy-host
+    path: "{{params.deploy_dir}}/rollback.sh"
+    owner: root
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      CURRENT=$(cat "{{params.deploy_dir}}/active-slot" 2>/dev/null || echo "blue")
+      TARGET=$( [ "$CURRENT" = "blue" ] && echo "green" || echo "blue" )
+      echo "Rolling back: $CURRENT -> $TARGET"
+      "{{params.deploy_dir}}/health-gate.sh" "$TARGET"
+      "{{params.deploy_dir}}/traffic-switch.sh" "$TARGET"
+    depends_on: [traffic-switch]
+    tags: [deploy, rollback]
+    resource_group: canary-gate
+
+policy:
+  failure: stop_on_first
+  parallel_machines: false
+  tripwire: true
+  lock_file: true
+  deny_paths: [/etc/shadow, /etc/gshadow]
+  pre_apply: "echo 'Configuring canary deployment for {{params.app_name}}'"
+  post_apply: "echo 'Canary deployment configured'"
+  notify:
+    on_success: "echo 'Canary deployment ready — blue/green slots configured'"
+    on_failure: "echo 'Canary deployment failed — check slot health'"
+    on_drift: "echo 'Canary deployment configuration drift detected'"
+
+outputs:
+  app_name:
+    value: "{{params.app_name}}"
+    description: "Application name"
+  blue_endpoint:
+    value: "http://127.0.0.1:{{params.blue_port}}"
+    description: "Blue slot endpoint"
+  green_endpoint:
+    value: "http://127.0.0.1:{{params.green_port}}"
+    description: "Green slot endpoint"
+  health_gate:
+    value: "{{params.deploy_dir}}/health-gate.sh"
+    description: "Health gate script path"
+  rollback:
+    value: "{{params.deploy_dir}}/rollback.sh"
+    description: "Rollback script path"

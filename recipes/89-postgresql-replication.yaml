@@ -1,0 +1,202 @@
+# Recipe: 89-postgresql-replication
+# Tier: 2+3 (container validate + bare-metal apply)
+# Idempotency: strong
+# Budget: first_apply < 120s, idempotent < 3s
+#
+# PostgreSQL primary/replica streaming replication with WAL config,
+# replication slots, recovery bootstrap, and health monitoring.
+
+version: '1.0'
+name: postgresql-replication
+description: "PostgreSQL primary/replica streaming replication with WAL and health checks"
+
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
+params:
+  pg_version: "16"
+  replication_user: replicator
+  replication_password: "{{ secrets.pg_replication_password }}"
+  primary_addr: "10.0.0.10"
+  data_dir: /var/lib/postgresql/16/main
+
+machines:
+  primary:
+    hostname: pg-primary
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-89-primary
+      ephemeral: false
+      privileged: false
+      init: true
+  replica:
+    hostname: pg-replica
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-89-replica
+      ephemeral: false
+      privileged: false
+      init: true
+
+resources:
+  pg-pkg-primary:
+    type: package
+    machine: primary
+    provider: apt
+    packages: [postgresql]
+    version: "latest"
+    tags: [database, replication]
+    resource_group: postgresql
+
+  pg-pkg-replica:
+    type: package
+    machine: replica
+    provider: apt
+    packages: [postgresql]
+    version: "latest"
+    tags: [database, replication]
+    resource_group: postgresql
+
+  pg-hba-primary:
+    type: file
+    machine: primary
+    path: "/etc/postgresql/{{params.pg_version}}/main/pg_hba.conf"
+    owner: root
+    mode: '0640'
+    content: |
+      local all postgres peer
+      host  all all 127.0.0.1/32 scram-sha-256
+      host  replication {{params.replication_user}} 0.0.0.0/0 scram-sha-256
+    depends_on: [pg-pkg-primary]
+    tags: [database, security, replication]
+    resource_group: postgresql
+
+  pg-conf-primary:
+    type: file
+    machine: primary
+    path: "/etc/postgresql/{{params.pg_version}}/main/postgresql.conf"
+    owner: root
+    mode: '0644'
+    content: |
+      listen_addresses = '*'
+      wal_level = replica
+      max_wal_senders = 5
+      wal_keep_size = 1024
+      archive_mode = on
+      archive_command = 'cp %p /var/lib/postgresql/wal_archive/%f'
+      hot_standby = on
+    depends_on: [pg-pkg-primary]
+    tags: [database, config, replication]
+    resource_group: postgresql
+
+  repl-slot-script:
+    type: file
+    machine: primary
+    path: /usr/local/bin/pg-create-repl-slot.sh
+    owner: root
+    mode: '0750'
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      SLOT="replica_slot_1"
+      EXISTS=$(su - postgres -c "psql -tAc \"SELECT 1 FROM pg_replication_slots WHERE slot_name='$SLOT';\"" 2>/dev/null || echo "")
+      [ "$EXISTS" = "1" ] && exit 0
+      su - postgres -c "psql -c \"SELECT pg_create_physical_replication_slot('$SLOT');\""
+    depends_on: [pg-conf-primary]
+    tags: [database, replication]
+    resource_group: postgresql
+
+  pg-service-primary:
+    type: service
+    machine: primary
+    name: postgresql
+    state: running
+    enabled: true
+    restart_on: [pg-conf-primary, pg-hba-primary]
+    depends_on: [pg-conf-primary, pg-hba-primary]
+    tags: [database, replication]
+    resource_group: postgresql
+
+  recovery-script:
+    type: file
+    machine: replica
+    path: /usr/local/bin/pg-setup-replica.sh
+    owner: root
+    mode: '0750'
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      [ -f "{{params.data_dir}}/standby.signal" ] && exit 0
+      systemctl stop postgresql || true
+      PGPASSWORD="{{params.replication_password}}" pg_basebackup \
+        -h {{params.primary_addr}} -U {{params.replication_user}} -D "{{params.data_dir}}" -Fp -Xs -R
+      chown -R postgres:postgres "{{params.data_dir}}"
+    depends_on: [pg-pkg-replica]
+    tags: [database, replication]
+    resource_group: postgresql
+
+  pg-service-replica:
+    type: service
+    machine: replica
+    name: postgresql
+    state: running
+    enabled: true
+    depends_on: [recovery-script]
+    tags: [database, replication]
+    resource_group: postgresql
+
+  repl-health:
+    type: file
+    machine: primary
+    path: /usr/local/bin/pg-repl-health.sh
+    owner: root
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      R=$(su - postgres -c "psql -tAc \"SELECT count(*) FROM pg_stat_replication;\"" 2>/dev/null || echo "0")
+      echo "pg_replication_replicas $R"
+      [ "$R" -eq 0 ] && echo "WARNING: No replicas" && exit 1
+    depends_on: [pg-service-primary]
+    tags: [database, monitoring]
+    resource_group: monitoring
+
+  health-cron:
+    type: cron
+    machine: primary
+    schedule: "*/5 * * * *"
+    command: "/usr/local/bin/pg-repl-health.sh 2>&1 | logger -t pg-replication"
+    name: pg-repl-health
+    depends_on: [repl-health]
+    tags: [database, monitoring]
+    resource_group: monitoring
+
+policy:
+  failure: continue_independent
+  parallel_machines: true
+  tripwire: true
+  lock_file: true
+  deny_paths: [/etc/shadow, /etc/gshadow]
+  notify:
+    on_success: "echo 'PostgreSQL replication deployed'"
+    on_failure: "echo 'PostgreSQL replication failed'"
+    on_drift: "echo 'PostgreSQL replication drift detected'"
+
+outputs:
+  primary_host:
+    value: "{{params.primary_addr}}"
+    description: "PostgreSQL primary address"
+  replication_user:
+    value: "{{params.replication_user}}"
+    description: "Replication user name"

@@ -1,0 +1,220 @@
+# Recipe: 93-k3s-cluster
+# Tier: 2+3 (container validate + bare-metal apply)
+# Idempotency: strong
+# Budget: first_apply < 90s, idempotent < 3s
+#
+# K3s lightweight Kubernetes edge cluster: server + agent topology,
+# Helm, Traefik ingress, kubeconfig extraction, health check.
+
+version: '1.0'
+name: k3s-cluster
+description: "K3s lightweight Kubernetes edge cluster — server, agent, Helm, Traefik ingress"
+
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
+params:
+  k3s_version: "v1.30.2+k3s1"
+  cluster_token: "{{ secrets.k3s_token }}"
+  server_addr: "10.0.0.10"
+  pod_cidr: "10.42.0.0/16"
+  service_cidr: "10.43.0.0/16"
+
+machines:
+  server:
+    hostname: k3s-server
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-93-server
+      ephemeral: false
+      privileged: false
+      init: true
+  agent:
+    hostname: k3s-agent
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-93-agent
+      ephemeral: false
+      privileged: false
+      init: true
+
+resources:
+  # ── K3s Server Install Script ──
+  k3s-install-server:
+    type: file
+    machine: server
+    path: /usr/local/bin/k3s-install.sh
+    owner: root
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      export INSTALL_K3S_VERSION="{{params.k3s_version}}"
+      export K3S_TOKEN="{{params.cluster_token}}"
+      curl -sfL https://get.k3s.io -o /tmp/k3s-install.sh
+      chmod +x /tmp/k3s-install.sh
+      /tmp/k3s-install.sh server \
+        --cluster-cidr={{params.pod_cidr}} \
+        --service-cidr={{params.service_cidr}} \
+        --write-kubeconfig-mode=644
+    tags: [k3s, install, server]
+    resource_group: k3s-control
+
+  # ── Server Configuration ──
+  k3s-server-config:
+    type: file
+    machine: server
+    path: /etc/rancher/k3s/config.yaml
+    owner: root
+    mode: '0600'
+    content: |
+      # Managed by forjar — K3s server configuration
+      token: "{{params.cluster_token}}"
+      cluster-cidr: "{{params.pod_cidr}}"
+      service-cidr: "{{params.service_cidr}}"
+      write-kubeconfig-mode: "0644"
+      tls-san: ["{{params.server_addr}}"]
+      disable: [local-storage]
+    depends_on: [k3s-install-server]
+    tags: [k3s, config, server]
+    resource_group: k3s-control
+
+  # ── Agent Join Script ──
+  k3s-install-agent:
+    type: file
+    machine: agent
+    path: /usr/local/bin/k3s-join.sh
+    owner: root
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      export INSTALL_K3S_VERSION="{{params.k3s_version}}"
+      export K3S_URL="https://{{params.server_addr}}:6443"
+      export K3S_TOKEN="{{params.cluster_token}}"
+      curl -sfL https://get.k3s.io -o /tmp/k3s-install.sh
+      chmod +x /tmp/k3s-install.sh
+      /tmp/k3s-install.sh agent
+    depends_on: [k3s-server-config]
+    tags: [k3s, install, agent]
+    resource_group: k3s-agent
+
+  # ── Kubeconfig Extraction ──
+  kubeconfig-extract:
+    type: file
+    machine: server
+    path: /usr/local/bin/k3s-kubeconfig.sh
+    owner: root
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      mkdir -p /root/.kube
+      sed "s/127.0.0.1/{{params.server_addr}}/g" \
+        /etc/rancher/k3s/k3s.yaml > /root/.kube/config
+      chmod 600 /root/.kube/config
+    depends_on: [k3s-server-config]
+    tags: [k3s, kubeconfig]
+    resource_group: k3s-control
+
+  # ── Helm Install ──
+  helm-install:
+    type: file
+    machine: server
+    path: /usr/local/bin/install-helm.sh
+    owner: root
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 -o /tmp/get-helm-3.sh
+      chmod +x /tmp/get-helm-3.sh
+      /tmp/get-helm-3.sh
+    depends_on: [kubeconfig-extract]
+    tags: [k3s, helm]
+    resource_group: k3s-control
+
+  # ── Traefik Ingress Configuration ──
+  traefik-config:
+    type: file
+    machine: server
+    path: /var/lib/rancher/k3s/server/manifests/traefik-config.yaml
+    owner: root
+    mode: '0644'
+    content: |
+      # Managed by forjar — Traefik ingress configuration
+      apiVersion: helm.cattle.io/v1
+      kind: HelmChartConfig
+      metadata:
+        name: traefik
+        namespace: kube-system
+      spec:
+        valuesContent: |-
+          ports:
+            web: { exposedPort: 80 }
+            websecure: { exposedPort: 443 }
+          providers:
+            kubernetesIngress:
+              publishedService: { enabled: true }
+    depends_on: [helm-install]
+    tags: [k3s, traefik, ingress]
+    resource_group: k3s-control
+
+  # ── Cluster Health Check ──
+  cluster-health:
+    type: file
+    machine: server
+    path: /usr/local/bin/k3s-health.sh
+    owner: root
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      NODES=$(k3s kubectl get nodes --no-headers 2>/dev/null | wc -l)
+      READY=$(k3s kubectl get nodes --no-headers 2>/dev/null | grep -c " Ready" || true)
+      echo "k3s_nodes_total $NODES"
+      echo "k3s_nodes_ready $READY"
+    depends_on: [traefik-config]
+    tags: [k3s, health, monitoring]
+    resource_group: k3s-control
+
+policy:
+  failure: continue_independent
+  parallel_machines: true
+  tripwire: true
+  lock_file: true
+  deny_paths: [/etc/shadow, /etc/gshadow]
+  pre_apply: "echo 'Deploying K3s edge cluster'"
+  post_apply: "echo 'K3s cluster deployment complete'"
+  notify:
+    on_success: "echo 'K3s cluster deployed — server + agent ready'"
+    on_failure: "echo 'K3s deployment failed — check install logs'"
+    on_drift: "echo 'K3s cluster configuration drift detected'"
+
+outputs:
+  k3s_version:
+    value: "{{params.k3s_version}}"
+    description: "Deployed K3s version"
+  server_addr:
+    value: "{{params.server_addr}}"
+    description: "K3s server API address"
+  kubeconfig:
+    value: "/root/.kube/config"
+    description: "Kubeconfig file path on server"
+  pod_cidr:
+    value: "{{params.pod_cidr}}"
+    description: "Pod network CIDR"
+  service_cidr:
+    value: "{{params.service_cidr}}"
+    description: "Service network CIDR"

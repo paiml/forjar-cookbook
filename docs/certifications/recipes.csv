@@ -61,3 +61,14 @@ recipe_num,name,category,status,tier,idempotency_class,first_apply_ms,idempotent
 60,stack-sovereign-ai,composability,qualified,3,strong,1755,22,,,2026-03-01,cookbook-runner,94,A,100,100,100,97,90,80,80,85,1.0
 61,stack-fleet-baseline,composability,qualified,2+3,strong,1157,42,,,2026-03-01,cookbook-runner,94,A,100,100,100,97,90,80,80,85,1.0
 62,stack-cross-distro,composability,qualified,2+3,strong,1265,22,,,2026-03-01,cookbook-runner,94,A,100,100,100,97,90,80,80,85,1.0
+88,wireguard-vpn,infra,pending,2+3,strong,,,,,,,,,,,100,90,70,80,95,1.0
+89,postgresql-replication,infra,pending,2+3,strong,,,,,,,,,,,100,90,70,50,95,1.0
+90,haproxy-ha,infra,pending,2+3,strong,,,,,,,,,,,100,84,50,50,95,1.0
+91,podman-rootless,infra,pending,2+3,strong,,,,,,,,,,,100,90,50,50,85,1.0
+92,cis-hardening,infra,pending,2+3,strong,,,,,,,,,,,100,90,50,20,85,1.0
+93,k3s-cluster,infra,pending,2+3,strong,,,,,,,,,,,100,90,70,70,95,1.0
+94,canary-deployment,devops,pending,2+3,strong,,,,,,,,,,,100,90,80,50,85,1.0
+95,otel-collector,infra,pending,2+3,strong,,,,,,,,,,,100,90,70,70,85,1.0
+96,oci-image-build,platform,pending,2+3,strong,,,,,,,,,,,100,90,70,60,85,1.0
+97,task-pipeline-gates,platform,pending,2+3,strong,,,,,,,,,,,100,90,70,60,85,1.0
+98,recipe-signing,platform,pending,2+3,strong,,,,,,,,,,,100,90,50,60,85,1.0

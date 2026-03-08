@@ -1,0 +1,235 @@
+# Recipe: 95-otel-collector
+# Tier: 2+3 (container validate + bare-metal apply)
+# Idempotency: strong
+# Budget: first_apply < 45s, idempotent < 2s
+#
+# OpenTelemetry Collector pipeline: OTLP gRPC/HTTP receivers, batch
+# processor, Prometheus exporter, systemd unit, firewall rules.
+
+version: '1.0'
+name: otel-collector
+description: "OpenTelemetry Collector pipeline — OTLP receivers, batch processing, Prometheus exporter"
+
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
+params:
+  otlp_grpc_port: "4317"
+  otlp_http_port: "4318"
+  prometheus_port: "8889"
+  log_level: info
+  batch_timeout: "5s"
+  otel_version: "0.104.0"
+  config_dir: /etc/otelcol
+  log_dir: /var/log/otelcol
+
+machines:
+  collector:
+    hostname: otel-collector
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-95-otel
+      ephemeral: false
+      privileged: false
+      init: true
+
+resources:
+  # ── Collector Binary Install ──
+  otel-package:
+    type: file
+    machine: collector
+    path: /usr/local/bin/install-otelcol.sh
+    owner: root
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      VERSION="{{params.otel_version}}"
+      ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
+      URL="https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v${VERSION}/otelcol_${VERSION}_linux_${ARCH}.tar.gz"
+      TMP=$(mktemp -d)
+      curl -fsSL "$URL" | tar xz -C "$TMP"
+      install -m 0755 "$TMP/otelcol" /usr/local/bin/otelcol
+      rm -rf "$TMP"
+    tags: [otel, install]
+    resource_group: otel-collector
+
+  # ── Configuration ──
+  config-dir:
+    type: file
+    machine: collector
+    path: "{{params.config_dir}}"
+    state: directory
+    owner: root
+    mode: '0755'
+    depends_on: [otel-package]
+    tags: [otel, config]
+    resource_group: otel-collector
+
+  otel-config:
+    type: file
+    machine: collector
+    path: "{{params.config_dir}}/config.yaml"
+    owner: root
+    mode: '0644'
+    content: |
+      # Managed by forjar — OpenTelemetry Collector configuration
+      receivers:
+        otlp:
+          protocols:
+            grpc: { endpoint: "0.0.0.0:{{params.otlp_grpc_port}}" }
+            http: { endpoint: "0.0.0.0:{{params.otlp_http_port}}" }
+      processors:
+        batch:
+          timeout: {{params.batch_timeout}}
+          send_batch_size: 1024
+        memory_limiter:
+          check_interval: 1s
+          limit_mib: 512
+      exporters:
+        logging: { loglevel: "{{params.log_level}}" }
+        prometheus:
+          endpoint: "0.0.0.0:{{params.prometheus_port}}"
+          metric_expiration: 5m
+      service:
+        telemetry:
+          logs: { level: "{{params.log_level}}" }
+        pipelines:
+          traces:
+            receivers: [otlp]
+            processors: [memory_limiter, batch]
+            exporters: [logging]
+          metrics:
+            receivers: [otlp]
+            processors: [memory_limiter, batch]
+            exporters: [logging, prometheus]
+          logs:
+            receivers: [otlp]
+            processors: [memory_limiter, batch]
+            exporters: [logging]
+    depends_on: [config-dir]
+    tags: [otel, config, pipeline]
+    resource_group: otel-collector
+
+  # ── Systemd Unit ──
+  otel-systemd:
+    type: file
+    machine: collector
+    path: /etc/systemd/system/otelcol.service
+    owner: root
+    mode: '0644'
+    content: |
+      [Unit]
+      Description=OpenTelemetry Collector
+      After=network-online.target
+      [Service]
+      Type=simple
+      ExecStart=/usr/local/bin/otelcol --config={{params.config_dir}}/config.yaml
+      Restart=on-failure
+      RestartSec=5
+      LimitNOFILE=65536
+      [Install]
+      WantedBy=multi-user.target
+    depends_on: [otel-config]
+    tags: [otel, systemd]
+    resource_group: otel-collector
+
+  # ── Log Directory ──
+  log-dir:
+    type: file
+    machine: collector
+    path: "{{params.log_dir}}"
+    state: directory
+    owner: root
+    mode: '0755'
+    depends_on: [otel-package]
+    tags: [otel, logs]
+    resource_group: otel-collector
+
+  # ── Health Check ──
+  otel-health:
+    type: file
+    machine: collector
+    path: /usr/local/bin/otel-health.sh
+    owner: root
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      for P in {{params.otlp_grpc_port}} {{params.otlp_http_port}} {{params.prometheus_port}}; do
+        UP=$( ss -tlnp | grep -qc ":${P}" && echo 1 || echo 0 )
+        echo "otel_port_up{port=\"$P\"} $UP"
+      done
+      pgrep -x otelcol >/dev/null && echo "otel_process_up 1" || echo "otel_process_up 0"
+    depends_on: [otel-systemd]
+    tags: [otel, health, monitoring]
+    resource_group: otel-collector
+
+  # ── Firewall: OTLP gRPC (4317) ──
+  fw-otlp-grpc:
+    type: network
+    machine: collector
+    protocol: tcp
+    port: "{{params.otlp_grpc_port}}"
+    action: allow
+    from: "0.0.0.0/0"
+    depends_on: [otel-config]
+    tags: [otel, firewall, grpc]
+    resource_group: otel-firewall
+
+  # ── Firewall: OTLP HTTP (4318) ──
+  fw-otlp-http:
+    type: network
+    machine: collector
+    protocol: tcp
+    port: "{{params.otlp_http_port}}"
+    action: allow
+    from: "0.0.0.0/0"
+    depends_on: [otel-config]
+    tags: [otel, firewall, http]
+    resource_group: otel-firewall
+
+  # ── Firewall: Prometheus (8889) ──
+  fw-prometheus:
+    type: network
+    machine: collector
+    protocol: tcp
+    port: "{{params.prometheus_port}}"
+    action: allow
+    from: "0.0.0.0/0"
+    depends_on: [otel-config]
+    tags: [otel, firewall, prometheus]
+    resource_group: otel-firewall
+
+policy:
+  failure: continue_independent
+  parallel_machines: false
+  tripwire: true
+  lock_file: true
+  deny_paths: [/etc/shadow, /etc/gshadow]
+  pre_apply: "echo 'Deploying OpenTelemetry Collector'"
+  post_apply: "echo 'OTel Collector deployment complete'"
+  notify:
+    on_success: "echo 'OTel Collector deployed — gRPC/HTTP/Prometheus active'"
+    on_failure: "echo 'OTel Collector deployment failed'"
+    on_drift: "echo 'OTel Collector configuration drift detected'"
+
+outputs:
+  otlp_grpc_endpoint:
+    value: "0.0.0.0:{{params.otlp_grpc_port}}"
+    description: "OTLP gRPC receiver endpoint"
+  otlp_http_endpoint:
+    value: "0.0.0.0:{{params.otlp_http_port}}"
+    description: "OTLP HTTP receiver endpoint"
+  prometheus_endpoint:
+    value: "0.0.0.0:{{params.prometheus_port}}"
+    description: "Prometheus metrics endpoint"
+  config_path:
+    value: "{{params.config_dir}}/config.yaml"
+    description: "Collector configuration file path"

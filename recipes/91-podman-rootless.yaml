@@ -1,0 +1,185 @@
+# Recipe: 91-podman-rootless
+# Tier: 2+3 (container validate + bare-metal apply)
+# Idempotency: strong
+# Budget: first_apply < 60s, idempotent < 2s
+#
+# Podman rootless container deployment with systemd user units,
+# auto-update timer, subuid/subgid mapping, and health monitoring.
+
+version: '1.0'
+name: podman-rootless
+description: "Podman rootless container with systemd user units and auto-update"
+
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
+params:
+  container_image: "docker.io/library/nginx:stable-alpine"
+  container_name: myapp
+  container_port: "8080"
+  host_user: appuser
+
+machines:
+  container-host:
+    hostname: container-host
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-91-podman
+      ephemeral: false
+      privileged: false
+      init: true
+
+resources:
+  podman-pkg:
+    type: package
+    machine: container-host
+    provider: apt
+    packages: [podman, slirp4netns, fuse-overlayfs, uidmap]
+    version: "latest"
+    tags: [container, podman]
+    resource_group: podman
+
+  subuid-conf:
+    type: file
+    machine: container-host
+    path: /etc/subuid
+    owner: root
+    mode: '0644'
+    content: "{{params.host_user}}:100000:65536\n"
+    depends_on: [podman-pkg]
+    tags: [container, security]
+    resource_group: podman
+
+  subgid-conf:
+    type: file
+    machine: container-host
+    path: /etc/subgid
+    owner: root
+    mode: '0644'
+    content: "{{params.host_user}}:100000:65536\n"
+    depends_on: [podman-pkg]
+    tags: [container, security]
+    resource_group: podman
+
+  systemd-user-dir:
+    type: file
+    machine: container-host
+    path: "/home/{{params.host_user}}/.config/systemd/user"
+    state: directory
+    owner: "{{params.host_user}}"
+    mode: '0755'
+    depends_on: [podman-pkg]
+    tags: [container, systemd]
+    resource_group: podman
+
+  container-unit:
+    type: file
+    machine: container-host
+    path: "/home/{{params.host_user}}/.config/systemd/user/{{params.container_name}}.service"
+    owner: "{{params.host_user}}"
+    mode: '0644'
+    content: |
+      [Unit]
+      Description=Podman {{params.container_name}}
+      After=network-online.target
+      [Service]
+      Restart=on-failure
+      ExecStartPre=-/usr/bin/podman rm -f {{params.container_name}}
+      ExecStart=/usr/bin/podman run --name {{params.container_name}} \
+        -p {{params.container_port}}:{{params.container_port}} \
+        --label io.containers.autoupdate=registry \
+        --health-cmd "curl -sf http://localhost:{{params.container_port}}/ || exit 1" \
+        --health-interval 30s {{params.container_image}}
+      ExecStop=/usr/bin/podman stop -t 10 {{params.container_name}}
+      Type=simple
+      [Install]
+      WantedBy=default.target
+    depends_on: [systemd-user-dir, subuid-conf, subgid-conf]
+    tags: [container, systemd]
+    resource_group: podman
+
+  autoupdate-timer:
+    type: file
+    machine: container-host
+    path: "/home/{{params.host_user}}/.config/systemd/user/podman-auto-update.timer"
+    owner: "{{params.host_user}}"
+    mode: '0644'
+    content: |
+      [Unit]
+      Description=Podman auto-update timer
+      [Timer]
+      OnCalendar=daily
+      Persistent=true
+      [Install]
+      WantedBy=timers.target
+    depends_on: [systemd-user-dir]
+    tags: [container, autoupdate]
+    resource_group: podman
+
+  cni-config:
+    type: file
+    machine: container-host
+    path: "/etc/containers/networks/{{params.container_name}}-net.json"
+    owner: root
+    mode: '0644'
+    content: |
+      {"name":"{{params.container_name}}-net","driver":"bridge",
+       "subnets":[{"subnet":"10.89.1.0/24","gateway":"10.89.1.1"}],
+       "dns_enabled":true}
+    depends_on: [podman-pkg]
+    tags: [container, network]
+    resource_group: podman
+
+  podman-health:
+    type: file
+    machine: container-host
+    path: /usr/local/bin/podman-health.sh
+    owner: root
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      ST=$(su - "{{params.host_user}}" -c "podman inspect --format '{{`{{.State.Status}}`}}' {{params.container_name}}" 2>/dev/null || echo "missing")
+      echo "podman_status{name=\"{{params.container_name}}\"} $ST"
+      [ "$ST" != "running" ] && exit 1
+    depends_on: [container-unit]
+    tags: [container, monitoring]
+    resource_group: monitoring
+
+  health-cron:
+    type: cron
+    machine: container-host
+    schedule: "*/5 * * * *"
+    command: "/usr/local/bin/podman-health.sh 2>&1 | logger -t podman-health"
+    name: podman-health
+    depends_on: [podman-health]
+    tags: [container, monitoring]
+    resource_group: monitoring
+
+policy:
+  failure: continue_independent
+  parallel_machines: false
+  tripwire: true
+  lock_file: true
+  deny_paths: [/etc/shadow, /etc/gshadow]
+  notify:
+    on_success: "echo 'Podman rootless deployment completed'"
+    on_failure: "echo 'Podman rootless deployment failed'"
+    on_drift: "echo 'Podman rootless drift detected'"
+
+outputs:
+  container_name:
+    value: "{{params.container_name}}"
+    description: "Deployed container name"
+  container_url:
+    value: "http://localhost:{{params.container_port}}"
+    description: "Container service URL"
+  autoupdate:
+    value: "enabled"
+    description: "Podman auto-update status"

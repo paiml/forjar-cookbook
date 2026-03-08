@@ -1,0 +1,174 @@
+# Recipe: 97-task-pipeline-gates
+# Tier: 1+2+3 (validate + container apply)
+# Idempotency: strong (completion_check + output_artifacts)
+# Budget: first_apply < 30s, idempotent < 2s
+#
+# Task pipeline with quality gate enforcement. task_mode: pipeline with
+# inter-stage gates — lint and test are gates that abort on failure;
+# build and deploy proceed only if gates pass.
+# Refs: FJ-2700, FJ-2702
+
+version: '1.0'
+name: task-pipeline-gates
+description: "Task pipeline with quality gates — lint/test gate stages abort on failure"
+
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
+params:
+  workspace: /opt/pipeline-gates
+  project_name: forjar-gate-demo
+  test_command: "echo 'all 42 tests passed'"
+  lint_command: "echo 'lint: 0 warnings, 0 errors'"
+  deploy_target: /opt/deploy
+
+machines:
+  ci-runner:
+    hostname: ci-runner
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-97-pipeline-gates
+      ephemeral: false
+      privileged: false
+      init: true
+
+resources:
+  workspace-dir:
+    type: file
+    machine: ci-runner
+    path: "{{params.workspace}}"
+    state: directory
+    owner: root
+    mode: '0755'
+    tags: [pipeline, workspace]
+    resource_group: pipeline-infra
+
+  deploy-dir:
+    type: file
+    machine: ci-runner
+    path: "{{params.deploy_target}}"
+    state: directory
+    owner: root
+    mode: '0755'
+    tags: [pipeline, deploy]
+    resource_group: pipeline-infra
+
+  project-source:
+    type: file
+    machine: ci-runner
+    path: "{{params.workspace}}/src/main.sh"
+    owner: root
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      echo "{{params.project_name}} v1.0 running"
+    depends_on: [workspace-dir]
+    tags: [pipeline, source]
+    resource_group: pipeline-source
+
+  project-config:
+    type: file
+    machine: ci-runner
+    path: "{{params.workspace}}/project.yaml"
+    owner: root
+    mode: '0644'
+    content: |
+      name: "{{params.project_name}}"
+      version: "1.0.0"
+      gates: { lint: required, test: required, build: optional, deploy: optional }
+    depends_on: [workspace-dir]
+    tags: [pipeline, config]
+    resource_group: pipeline-source
+
+  # Pipeline with gate enforcement
+  quality-pipeline:
+    type: task
+    machine: ci-runner
+    command: "echo 'Pipeline orchestrator for {{params.project_name}}'"
+    working_dir: "{{params.workspace}}"
+    task_mode: pipeline
+    stages:
+      - name: lint
+        command: |
+          echo "=== Stage: lint ==="
+          {{params.lint_command}}
+          echo "LINT_PASS" > {{params.workspace}}/gate-lint.txt
+        gate: true
+      - name: test
+        command: |
+          echo "=== Stage: test ==="
+          {{params.test_command}}
+          echo "TEST_PASS" > {{params.workspace}}/gate-test.txt
+        gate: true
+      - name: build
+        command: |
+          echo "=== Stage: build ==="
+          cp {{params.workspace}}/src/main.sh {{params.workspace}}/{{params.project_name}}-build
+          chmod +x {{params.workspace}}/{{params.project_name}}-build
+          echo "BUILD_OK" > {{params.workspace}}/gate-build.txt
+        gate: false
+      - name: deploy
+        command: |
+          echo "=== Stage: deploy ==="
+          cp {{params.workspace}}/{{params.project_name}}-build {{params.deploy_target}}/{{params.project_name}}
+          echo "DEPLOY_OK" > {{params.workspace}}/gate-deploy.txt
+        gate: false
+    timeout: 300
+    completion_check: "test -f {{params.workspace}}/gate-deploy.txt"
+    output_artifacts:
+      - "{{params.workspace}}/gate-lint.txt"
+      - "{{params.workspace}}/gate-test.txt"
+      - "{{params.deploy_target}}/{{params.project_name}}"
+    depends_on: [project-source, project-config, deploy-dir]
+    tags: [pipeline, gates, ci]
+    resource_group: pipeline
+
+  gate-report:
+    type: file
+    machine: ci-runner
+    path: /usr/local/bin/forjar-gate-report.sh
+    owner: root
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      echo "=== Pipeline Gate Report: {{params.project_name}} ==="
+      for STAGE in lint test build deploy; do
+        FILE="{{params.workspace}}/gate-${STAGE}.txt"
+        [ -f "$FILE" ] && echo "  $STAGE: $(cat "$FILE")" || echo "  $STAGE: NOT RUN"
+      done
+    depends_on: [quality-pipeline]
+    tags: [pipeline, report]
+    resource_group: pipeline-infra
+
+policy:
+  failure: stop_on_first
+  parallel_machines: false
+  tripwire: true
+  lock_file: true
+  deny_paths: [/etc/passwd, /etc/shadow]
+  ssh_retries: 3
+  pre_apply: "echo 'Running quality-gated pipeline for {{params.project_name}}'"
+  post_apply: "echo 'Pipeline complete — all gates evaluated'"
+  notify:
+    on_success: "echo 'Pipeline passed — all gates green for {{params.project_name}}'"
+    on_failure: "echo 'Pipeline FAILED — gate violation in {{params.project_name}}'"
+    on_drift: "echo 'Pipeline artifact drift detected for {{params.project_name}}'"
+
+outputs:
+  workspace:
+    value: "{{params.workspace}}"
+    description: "Pipeline workspace directory"
+  deploy_path:
+    value: "{{params.deploy_target}}/{{params.project_name}}"
+    description: "Deployed artifact path"
+  gate_stages:
+    value: "lint(gate),test(gate),build,deploy"
+    description: "Pipeline stages with gate annotations"

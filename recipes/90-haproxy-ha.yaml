@@ -1,0 +1,260 @@
+# Recipe: 90-haproxy-ha
+# Tier: 2+3 (container validate + bare-metal apply)
+# Idempotency: strong
+# Budget: first_apply < 90s, idempotent < 3s
+#
+# HAProxy + Keepalived high availability with VRRP failover,
+# stats dashboard, health checks, and firewall rules.
+
+version: '1.0'
+name: haproxy-ha
+description: "HAProxy + Keepalived HA with VRRP failover and stats dashboard"
+
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
+params:
+  virtual_ip: "10.0.0.100"
+  vrrp_password: "{{ secrets.vrrp_password }}"
+  backend_servers: "server app1 10.0.0.11:8080 check\n    server app2 10.0.0.12:8080 check"
+  stats_user: admin
+  stats_password: "{{ secrets.stats_password }}"
+
+machines:
+  lb-primary:
+    hostname: lb-primary
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-90-lb-primary
+      ephemeral: false
+      privileged: false
+      init: true
+  lb-standby:
+    hostname: lb-standby
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-90-lb-standby
+      ephemeral: false
+      privileged: false
+      init: true
+
+resources:
+  haproxy-pkg-primary:
+    type: package
+    machine: lb-primary
+    provider: apt
+    packages: [haproxy]
+    version: "latest"
+    tags: [loadbalancer, haproxy]
+    resource_group: haproxy
+
+  haproxy-pkg-standby:
+    type: package
+    machine: lb-standby
+    provider: apt
+    packages: [haproxy]
+    version: "latest"
+    tags: [loadbalancer, haproxy]
+    resource_group: haproxy
+
+  keepalived-pkg-primary:
+    type: package
+    machine: lb-primary
+    provider: apt
+    packages: [keepalived]
+    version: "latest"
+    tags: [loadbalancer, keepalived]
+    resource_group: keepalived
+
+  keepalived-pkg-standby:
+    type: package
+    machine: lb-standby
+    provider: apt
+    packages: [keepalived]
+    version: "latest"
+    tags: [loadbalancer, keepalived]
+    resource_group: keepalived
+
+  haproxy-cfg-primary:
+    type: file
+    machine: lb-primary
+    path: /etc/haproxy/haproxy.cfg
+    owner: root
+    mode: '0644'
+    content: |
+      global
+          log /dev/log local0
+          maxconn 4096
+          daemon
+      defaults
+          mode http
+          timeout connect 5s
+          timeout client 50s
+          timeout server 50s
+      frontend http_front
+          bind *:80
+          bind *:443
+          default_backend http_back
+      backend http_back
+          balance roundrobin
+          option httpchk GET /health
+          {{params.backend_servers}}
+      listen stats
+          bind *:8404
+          stats enable
+          stats uri /stats
+          stats auth {{params.stats_user}}:{{params.stats_password}}
+    depends_on: [haproxy-pkg-primary]
+    tags: [loadbalancer, config]
+    resource_group: haproxy
+
+  haproxy-cfg-standby:
+    type: file
+    machine: lb-standby
+    path: /etc/haproxy/haproxy.cfg
+    source: /etc/haproxy/haproxy.cfg
+    owner: root
+    mode: '0644'
+    depends_on: [haproxy-pkg-standby]
+    tags: [loadbalancer, config]
+    resource_group: haproxy
+
+  keepalived-conf-primary:
+    type: file
+    machine: lb-primary
+    path: /etc/keepalived/keepalived.conf
+    owner: root
+    mode: '0644'
+    content: |
+      vrrp_script chk_haproxy { script "/usr/bin/pgrep haproxy"
+          interval 2 }
+      vrrp_instance VI_1 {
+          state MASTER
+          interface eth0
+          virtual_router_id 51
+          priority 101
+          authentication { auth_type PASS
+              auth_pass {{params.vrrp_password}} }
+          virtual_ipaddress { {{params.virtual_ip}} }
+          track_script { chk_haproxy } }
+    depends_on: [keepalived-pkg-primary]
+    tags: [loadbalancer, keepalived, config]
+    resource_group: keepalived
+
+  keepalived-conf-standby:
+    type: file
+    machine: lb-standby
+    path: /etc/keepalived/keepalived.conf
+    owner: root
+    mode: '0644'
+    content: |
+      vrrp_script chk_haproxy { script "/usr/bin/pgrep haproxy"
+          interval 2 }
+      vrrp_instance VI_1 {
+          state BACKUP
+          interface eth0
+          virtual_router_id 51
+          priority 100
+          authentication { auth_type PASS
+              auth_pass {{params.vrrp_password}} }
+          virtual_ipaddress { {{params.virtual_ip}} }
+          track_script { chk_haproxy } }
+    depends_on: [keepalived-pkg-standby]
+    tags: [loadbalancer, keepalived, config]
+    resource_group: keepalived
+
+  ha-health:
+    type: file
+    machine: lb-primary
+    path: /usr/local/bin/ha-health.sh
+    owner: root
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      HA=$(pgrep -c haproxy 2>/dev/null || echo "0")
+      KA=$(pgrep -c keepalived 2>/dev/null || echo "0")
+      echo "haproxy=$HA keepalived=$KA"
+      [ "$HA" -eq 0 ] || [ "$KA" -eq 0 ] && exit 1
+    depends_on: [haproxy-cfg-primary, keepalived-conf-primary]
+    tags: [loadbalancer, monitoring]
+    resource_group: monitoring
+
+  fw-http:
+    type: network
+    machine: lb-primary
+    protocol: tcp
+    port: "80"
+    action: allow
+    from: "0.0.0.0/0"
+    depends_on: [haproxy-pkg-primary]
+    tags: [loadbalancer, firewall]
+    resource_group: firewall
+
+  fw-https:
+    type: network
+    machine: lb-primary
+    protocol: tcp
+    port: "443"
+    action: allow
+    from: "0.0.0.0/0"
+    depends_on: [haproxy-pkg-primary]
+    tags: [loadbalancer, firewall]
+    resource_group: firewall
+
+  fw-vrrp:
+    # VRRP uses IP protocol 112 (not TCP/UDP) — use iptables script
+    type: file
+    machine: lb-primary
+    path: /etc/forjar/vrrp-firewall.sh
+    owner: root
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      # Allow VRRP multicast (IP protocol 112)
+      iptables -C INPUT -p 112 -j ACCEPT 2>/dev/null || \
+        iptables -A INPUT -p 112 -j ACCEPT
+    depends_on: [keepalived-pkg-primary]
+    tags: [loadbalancer, firewall, keepalived]
+    resource_group: firewall
+
+  fw-stats:
+    type: network
+    machine: lb-primary
+    protocol: tcp
+    port: "8404"
+    action: allow
+    from: "10.0.0.0/8"
+    depends_on: [haproxy-pkg-primary]
+    tags: [loadbalancer, firewall, stats]
+    resource_group: firewall
+
+policy:
+  failure: continue_independent
+  parallel_machines: true
+  tripwire: true
+  lock_file: true
+  deny_paths: [/etc/shadow, /etc/gshadow]
+  notify:
+    on_success: "echo 'HAProxy HA deployed successfully'"
+    on_failure: "echo 'HAProxy HA deployment failed'"
+    on_drift: "echo 'HAProxy HA drift detected'"
+
+outputs:
+  virtual_ip:
+    value: "{{params.virtual_ip}}"
+    description: "VRRP virtual IP address"
+  stats_url:
+    value: "http://{{params.virtual_ip}}:8404/stats"
+    description: "HAProxy stats dashboard URL"

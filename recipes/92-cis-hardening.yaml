@@ -1,0 +1,185 @@
+# Recipe: 92-cis-hardening
+# Tier: 2+3 (container validate + bare-metal apply)
+# Idempotency: strong
+# Budget: first_apply < 60s, idempotent < 2s
+#
+# CIS Benchmark Level 1 hardening: auditd rules, kernel sysctl,
+# login/PAM policies, filesystem permissions, module blacklisting.
+
+version: '1.0'
+name: cis-hardening
+description: "CIS Benchmark Level 1 — auditd, sysctl, PAM, filesystem, kernel modules"
+
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
+params:
+  pw_min_length: "14"
+  pw_max_days: "90"
+  umask_value: "027"
+
+machines:
+  target:
+    hostname: target
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-92-cis
+      ephemeral: false
+      privileged: false
+      init: true
+
+resources:
+  auditd-pkg:
+    type: package
+    machine: target
+    provider: apt
+    packages: [auditd, audispd-plugins]
+    version: "latest"
+    tags: [cis, audit]
+    resource_group: audit
+
+  audit-rules:
+    type: file
+    machine: target
+    path: /etc/audit/rules.d/cis-hardening.rules
+    owner: root
+    mode: '0640'
+    content: |
+      -a always,exit -F arch=b64 -S adjtimex -S settimeofday -k time-change
+      -w /etc/localtime -p wa -k time-change
+      -w /etc/passwd -p wa -k identity
+      -w /etc/shadow -p wa -k identity
+      -w /etc/group -p wa -k identity
+      -w /var/log/lastlog -p wa -k logins
+      -w /var/run/utmp -p wa -k session
+      -w /etc/sudoers -p wa -k scope
+      -w /sbin/insmod -p x -k modules
+      -a always,exit -F arch=b64 -S init_module -S delete_module -k modules
+    depends_on: [auditd-pkg]
+    tags: [cis, audit]
+    resource_group: audit
+
+  auditd-service:
+    type: service
+    machine: target
+    name: auditd
+    state: running
+    enabled: true
+    restart_on: [audit-rules]
+    depends_on: [audit-rules]
+    tags: [cis, audit]
+    resource_group: audit
+
+  sysctl-hardening:
+    type: file
+    machine: target
+    path: /etc/sysctl.d/99-cis-hardening.conf
+    owner: root
+    mode: '0644'
+    content: |
+      net.ipv4.ip_forward = 0
+      net.ipv4.conf.all.send_redirects = 0
+      net.ipv4.conf.all.accept_source_route = 0
+      net.ipv4.conf.all.accept_redirects = 0
+      net.ipv4.conf.all.log_martians = 1
+      net.ipv4.icmp_echo_ignore_broadcasts = 1
+      net.ipv4.tcp_syncookies = 1
+      net.ipv6.conf.all.accept_ra = 0
+      fs.suid_dumpable = 0
+      kernel.randomize_va_space = 2
+    tags: [cis, kernel]
+    resource_group: kernel
+
+  login-defs:
+    type: file
+    machine: target
+    path: /etc/login.defs
+    owner: root
+    mode: '0644'
+    content: |
+      PASS_MAX_DAYS {{params.pw_max_days}}
+      PASS_MIN_DAYS 7
+      PASS_WARN_AGE 7
+      UMASK {{params.umask_value}}
+      ENCRYPT_METHOD SHA512
+      CREATE_HOME yes
+    tags: [cis, auth]
+    resource_group: auth
+
+  pam-password:
+    type: file
+    machine: target
+    path: /etc/pam.d/common-password
+    owner: root
+    mode: '0644'
+    content: |
+      password requisite pam_pwquality.so retry=3 minlen={{params.pw_min_length}} dcredit=-1 ucredit=-1 ocredit=-1 lcredit=-1
+      password [success=1 default=ignore] pam_unix.so obscure use_authtok try_first_pass sha512 remember=5
+      password requisite pam_deny.so
+      password required pam_permit.so
+    tags: [cis, auth]
+    resource_group: auth
+
+  fs-permissions:
+    type: file
+    machine: target
+    path: /usr/local/bin/cis-fs-permissions.sh
+    owner: root
+    mode: '0750'
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      chmod 644 /etc/passwd && chmod 640 /etc/shadow
+      chmod 644 /etc/group && chmod 640 /etc/gshadow
+      chmod 600 /etc/crontab
+      chmod 700 /etc/cron.d /etc/cron.daily /etc/cron.hourly
+    tags: [cis, filesystem]
+    resource_group: filesystem
+
+  modprobe-blacklist:
+    type: file
+    machine: target
+    path: /etc/modprobe.d/cis-hardening.conf
+    owner: root
+    mode: '0644'
+    content: |
+      install cramfs /bin/true
+      install freevxfs /bin/true
+      install jffs2 /bin/true
+      install hfs /bin/true
+      install hfsplus /bin/true
+      install udf /bin/true
+      install dccp /bin/true
+      install sctp /bin/true
+      install rds /bin/true
+      install tipc /bin/true
+    tags: [cis, kernel]
+    resource_group: kernel
+
+policy:
+  failure: continue_independent
+  parallel_machines: false
+  tripwire: true
+  lock_file: true
+  deny_paths: [/etc/shadow, /etc/gshadow]
+  notify:
+    on_success: "echo 'CIS Level 1 hardening applied'"
+    on_failure: "echo 'CIS hardening failed'"
+    on_drift: "echo 'CIS hardening drift detected'"
+
+outputs:
+  password_policy:
+    value: "minlen={{params.pw_min_length}},maxdays={{params.pw_max_days}}"
+    description: "Password policy summary"
+  umask:
+    value: "{{params.umask_value}}"
+    description: "System-wide umask"
+  hardening_level:
+    value: "CIS-L1"
+    description: "CIS Benchmark compliance level"

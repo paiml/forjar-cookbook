@@ -20,5 +20,8 @@
   - [Task Pipelines & GPU](./recipes/task-pipelines.md)
   - [Container Builds](./recipes/container-builds.md)
   - [Testing Recipes](./recipes/testing.md)
+  - [Networking & VPN](./recipes/networking.md)
+  - [High Availability](./recipes/high-availability.md)
+  - [Platform Dogfood](./recipes/platform-dogfood.md)
 - [Runner Setup](./runner-setup.md)
 - [Troubleshooting](./troubleshooting.md)

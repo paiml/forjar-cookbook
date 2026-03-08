@@ -1,0 +1,271 @@
+# Recipe: 88-wireguard-vpn
+# Tier: 2+3 (container validate + bare-metal apply)
+# Idempotency: strong
+# Budget: first_apply < 45s, idempotent < 2s
+#
+# WireGuard VPN mesh: hub + spoke topology with peer config,
+# key generation, firewall rules, and systemd service management.
+
+version: '1.0'
+name: wireguard-vpn
+description: "WireGuard VPN mesh with hub/spoke topology, key management, and firewall rules"
+
+includes:
+  - includes/policy-defaults.yaml
+  - includes/notify-hooks.yaml
+
+params:
+  vpn_interface: wg0
+  vpn_port: "51820"
+  vpn_network: "10.100.0.0/24"
+  hub_vpn_addr: "10.100.0.1"
+  spoke_vpn_addr: "10.100.0.2"
+  hub_endpoint: "hub.example.com"
+  hub_public_key: "REPLACE_WITH_HUB_PUBLIC_KEY"
+  spoke_public_key: "REPLACE_WITH_SPOKE_PUBLIC_KEY"
+  keepalive: "25"
+
+machines:
+  hub:
+    hostname: vpn-hub
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-88-hub
+      ephemeral: false
+      privileged: false
+      init: true
+  spoke:
+    hostname: vpn-spoke
+    addr: container
+    user: root
+    arch: x86_64
+    transport: container
+    container:
+      runtime: docker
+      image: forjar-test-target
+      name: forjar-cookbook-88-spoke
+      ephemeral: false
+      privileged: false
+      init: true
+
+resources:
+  # ── Package Installation ──
+  wg-pkg-hub:
+    type: package
+    machine: hub
+    provider: apt
+    packages: [wireguard, wireguard-tools]
+    version: "latest"
+    tags: [vpn, packages]
+    resource_group: wireguard
+
+  wg-pkg-spoke:
+    type: package
+    machine: spoke
+    provider: apt
+    packages: [wireguard, wireguard-tools]
+    version: "latest"
+    tags: [vpn, packages]
+    resource_group: wireguard
+
+  # ── Key Directories ──
+  wg-dir-hub:
+    type: file
+    machine: hub
+    state: directory
+    path: /etc/wireguard
+    owner: root
+    mode: '0700'
+    depends_on: [wg-pkg-hub]
+    tags: [vpn, config]
+    resource_group: wireguard
+
+  wg-dir-spoke:
+    type: file
+    machine: spoke
+    state: directory
+    path: /etc/wireguard
+    owner: root
+    mode: '0700'
+    depends_on: [wg-pkg-spoke]
+    tags: [vpn, config]
+    resource_group: wireguard
+
+  # ── Hub Configuration ──
+  wg-conf-hub:
+    type: file
+    machine: hub
+    path: /etc/wireguard/{{params.vpn_interface}}.conf
+    owner: root
+    mode: '0600'
+    content: |
+      # Managed by forjar — WireGuard hub configuration
+      [Interface]
+      Address = {{params.hub_vpn_addr}}/24
+      ListenPort = {{params.vpn_port}}
+      # PrivateKey loaded from /etc/wireguard/private.key
+      PostUp = wg set %i private-key /etc/wireguard/private.key
+      PostUp = iptables -A FORWARD -i %i -j ACCEPT
+      PostDown = iptables -D FORWARD -i %i -j ACCEPT
+
+      [Peer]
+      # Spoke node
+      PublicKey = {{params.spoke_public_key}}
+      AllowedIPs = {{params.spoke_vpn_addr}}/32
+    depends_on: [wg-dir-hub]
+    tags: [vpn, config, hub]
+    resource_group: wireguard
+
+  # ── Spoke Configuration ──
+  wg-conf-spoke:
+    type: file
+    machine: spoke
+    path: /etc/wireguard/{{params.vpn_interface}}.conf
+    owner: root
+    mode: '0600'
+    content: |
+      # Managed by forjar — WireGuard spoke configuration
+      [Interface]
+      Address = {{params.spoke_vpn_addr}}/24
+      # PrivateKey loaded from /etc/wireguard/private.key
+      PostUp = wg set %i private-key /etc/wireguard/private.key
+
+      [Peer]
+      # Hub node
+      PublicKey = {{params.hub_public_key}}
+      Endpoint = {{params.hub_endpoint}}:{{params.vpn_port}}
+      AllowedIPs = {{params.vpn_network}}
+      PersistentKeepalive = {{params.keepalive}}
+    depends_on: [wg-dir-spoke]
+    tags: [vpn, config, spoke]
+    resource_group: wireguard
+
+  # ── Key Generation Scripts ──
+  keygen-hub:
+    type: file
+    machine: hub
+    path: /etc/wireguard/gen-keys.sh
+    owner: root
+    mode: '0700'
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      KEY_DIR=/etc/wireguard
+      if [ ! -f "$KEY_DIR/private.key" ]; then
+        wg genkey > "$KEY_DIR/private.key"
+        chmod 600 "$KEY_DIR/private.key"
+        wg pubkey < "$KEY_DIR/private.key" > "$KEY_DIR/public.key"
+        echo "Keys generated at $KEY_DIR"
+      else
+        echo "Keys already exist — skipping"
+      fi
+    depends_on: [wg-dir-hub]
+    tags: [vpn, keys]
+    resource_group: wireguard
+
+  keygen-spoke:
+    type: file
+    machine: spoke
+    path: /etc/wireguard/gen-keys.sh
+    owner: root
+    mode: '0700'
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      KEY_DIR=/etc/wireguard
+      if [ ! -f "$KEY_DIR/private.key" ]; then
+        wg genkey > "$KEY_DIR/private.key"
+        chmod 600 "$KEY_DIR/private.key"
+        wg pubkey < "$KEY_DIR/private.key" > "$KEY_DIR/public.key"
+        echo "Keys generated at $KEY_DIR"
+      else
+        echo "Keys already exist — skipping"
+      fi
+    depends_on: [wg-dir-spoke]
+    tags: [vpn, keys]
+    resource_group: wireguard
+
+  # ── Firewall Rules ──
+  fw-vpn-hub:
+    type: network
+    machine: hub
+    protocol: udp
+    port: "{{params.vpn_port}}"
+    action: allow
+    from: "0.0.0.0/0"
+    depends_on: [wg-pkg-hub]
+    tags: [vpn, firewall]
+    resource_group: wireguard
+
+  fw-vpn-spoke:
+    type: network
+    machine: spoke
+    protocol: udp
+    port: "{{params.vpn_port}}"
+    action: allow
+    from: "0.0.0.0/0"
+    depends_on: [wg-pkg-spoke]
+    tags: [vpn, firewall]
+    resource_group: wireguard
+
+  # ── VPN Health Check Script ──
+  vpn-health:
+    type: file
+    machine: hub
+    path: /usr/local/bin/wg-health.sh
+    owner: root
+    mode: '0755'
+    content: |
+      #!/bin/bash
+      # WireGuard health check — verify tunnel status
+      WG_IF="{{params.vpn_interface}}"
+      if wg show "$WG_IF" 2>/dev/null | grep -q "peer:"; then
+        PEERS=$(wg show "$WG_IF" peers | wc -l)
+        echo "wireguard_peers{interface=\"$WG_IF\"} $PEERS"
+        echo "wireguard_up{interface=\"$WG_IF\"} 1"
+      else
+        echo "wireguard_up{interface=\"$WG_IF\"} 0"
+      fi
+    depends_on: [wg-conf-hub]
+    tags: [vpn, monitoring]
+    resource_group: wireguard
+
+  health-cron:
+    type: cron
+    machine: hub
+    schedule: "*/5 * * * *"
+    command: "/usr/local/bin/wg-health.sh 2>&1 | logger -t wireguard-health"
+    name: wireguard-health
+    depends_on: [vpn-health]
+    tags: [vpn, monitoring]
+    resource_group: wireguard
+
+policy:
+  failure: continue_independent
+  parallel_machines: true
+  tripwire: true
+  lock_file: true
+  ssh_retries: 3
+  deny_paths: [/etc/shadow, /etc/gshadow]
+  pre_apply: "echo 'Configuring WireGuard VPN mesh'"
+  post_apply: "echo 'WireGuard VPN mesh configured'"
+  notify:
+    on_success: "echo 'VPN mesh deployed successfully'"
+    on_failure: "echo 'VPN deployment failed — check connectivity'"
+    on_drift: "echo 'VPN configuration drift detected'"
+
+outputs:
+  vpn_interface:
+    value: "{{params.vpn_interface}}"
+    description: "WireGuard interface name"
+  vpn_network:
+    value: "{{params.vpn_network}}"
+    description: "VPN subnet CIDR"
+  hub_address:
+    value: "{{params.hub_vpn_addr}}"
+    description: "Hub VPN address"
