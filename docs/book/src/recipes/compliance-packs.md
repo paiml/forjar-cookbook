@@ -62,6 +62,46 @@ println!("{}", format_coverage(&coverage));
 //     - backup-job
 ```
 
+## Pre-Apply Gate (FJ-3203)
+
+The compliance gate loads all packs from a directory and evaluates them against config resources before apply proceeds.
+
+```rust
+use forjar::core::compliance_gate::{
+    check_compliance_gate, config_to_resource_map, format_gate_result,
+};
+
+// Evaluate all packs in the policies/ directory
+let result = check_compliance_gate(
+    Path::new("policies/"),
+    &config,
+    true, // verbose
+).unwrap();
+
+println!("{}", format_gate_result(&result));
+// Compliance gate: PASS (2 packs, 0 errors, 1 warnings)
+
+if !result.passed() {
+    eprintln!("Apply blocked by {} error(s)", result.error_count);
+}
+```
+
+### CLI Integration
+
+```bash
+# Run compliance gate before apply
+forjar apply --policy-check --policy-dir ./compliance/
+
+# Uses default policies/ directory
+forjar apply --policy-check
+```
+
+The gate converts each config resource to a flat field map (`type`, `owner`, `mode`, `tags`, etc.) and evaluates every pack rule. Error-severity failures block apply; warnings are reported but allowed.
+
+```bash
+cargo run --example compliance_gate
+```
+
 ## Plugin Hot-Reload
 
 WASM plugins are cached with BLAKE3 hash verification. When a `.wasm` file changes on disk, forjar detects the hash mismatch and reloads automatically.
