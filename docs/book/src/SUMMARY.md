@@ -35,6 +35,7 @@
   - [Shell Providers](./recipes/shell-providers.md)
   - [WASM Plugins](./recipes/wasm-plugins.md)
   - [Compliance Packs](./recipes/compliance-packs.md)
+  - [Secret Audit & Namespace](./recipes/secret-audit.md)
 - [Quality Scoring](./quality-scoring.md)
 - [Runner Setup](./runner-setup.md)
 - [Troubleshooting](./troubleshooting.md)
