@@ -27,6 +27,7 @@
   - [Query Enrichments](./recipes/query-enrichments.md)
   - [Secret Providers](./recipes/secret-providers.md)
   - [Observability](./recipes/observability.md)
+  - [Policy Enforcement](./recipes/policy-enforcement.md)
 - [Quality Scoring](./quality-scoring.md)
 - [Runner Setup](./runner-setup.md)
 - [Troubleshooting](./troubleshooting.md)
