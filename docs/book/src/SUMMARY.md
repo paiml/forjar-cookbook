@@ -30,6 +30,8 @@
   - [Policy Enforcement](./recipes/policy-enforcement.md)
   - [Event-Driven Automation](./recipes/event-driven.md)
   - [Environment Promotion](./recipes/environment-promotion.md)
+  - [Ephemeral Secrets](./recipes/ephemeral-secrets.md)
+  - [Rules Validation](./recipes/rules-validation.md)
 - [Quality Scoring](./quality-scoring.md)
 - [Runner Setup](./runner-setup.md)
 - [Troubleshooting](./troubleshooting.md)
