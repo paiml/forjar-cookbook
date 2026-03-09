@@ -34,6 +34,7 @@
   - [Rules Validation](./recipes/rules-validation.md)
   - [Shell Providers](./recipes/shell-providers.md)
   - [WASM Plugins](./recipes/wasm-plugins.md)
+  - [Compliance Packs](./recipes/compliance-packs.md)
 - [Quality Scoring](./quality-scoring.md)
 - [Runner Setup](./runner-setup.md)
 - [Troubleshooting](./troubleshooting.md)
