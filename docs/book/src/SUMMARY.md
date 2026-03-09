@@ -28,6 +28,8 @@
   - [Secret Providers](./recipes/secret-providers.md)
   - [Observability](./recipes/observability.md)
   - [Policy Enforcement](./recipes/policy-enforcement.md)
+  - [Event-Driven Automation](./recipes/event-driven.md)
+  - [Environment Promotion](./recipes/environment-promotion.md)
 - [Quality Scoring](./quality-scoring.md)
 - [Runner Setup](./runner-setup.md)
 - [Troubleshooting](./troubleshooting.md)
