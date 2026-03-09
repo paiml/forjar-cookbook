@@ -32,6 +32,8 @@
   - [Environment Promotion](./recipes/environment-promotion.md)
   - [Ephemeral Secrets](./recipes/ephemeral-secrets.md)
   - [Rules Validation](./recipes/rules-validation.md)
+  - [Shell Providers](./recipes/shell-providers.md)
+  - [WASM Plugins](./recipes/wasm-plugins.md)
 - [Quality Scoring](./quality-scoring.md)
 - [Runner Setup](./runner-setup.md)
 - [Troubleshooting](./troubleshooting.md)
