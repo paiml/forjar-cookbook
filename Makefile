@@ -6,8 +6,9 @@
 .ONESHELL:
 
 .PHONY: all build test lint fmt fmt-check check coverage coverage-check \
-        examples docs-check update-qualifications qualify-recipe qualify-all \
-        score score-recipe book bashrs-lint clean release help
+        validate-recipes examples docs-check update-qualifications \
+        qualify-recipe qualify-all score score-recipe book bashrs-lint \
+        clean release help
 
 # Default target
 all: check
@@ -33,7 +34,7 @@ fmt-check:
 	cargo fmt --all -- --check
 
 # Full quality gate chain
-check: fmt-check lint test docs-check
+check: fmt-check lint test docs-check validate-recipes
 
 # Coverage with llvm-cov (library code only)
 coverage:
@@ -47,6 +48,11 @@ coverage-summary:
 # Coverage with threshold check (>= 95%)
 coverage-check:
 	@./scripts/coverage-check.sh
+
+# Validate all recipe YAML files (blocks broken YAML from being committed)
+validate-recipes:
+	cargo run --example validate_all
+	cargo run --example plan_all
 
 # Run examples (validate + plan + score all recipes)
 examples:
@@ -106,9 +112,10 @@ help:
 	@echo "  test                 Run all tests"
 	@echo "  lint                 Run clippy lints"
 	@echo "  fmt                  Format code"
-	@echo "  check                Full quality gate chain (fmt, lint, test, docs)"
+	@echo "  check                Full quality gate chain (fmt, lint, test, docs, recipes)"
 	@echo "  coverage             Generate coverage report"
 	@echo "  coverage-check       Verify >= 95% coverage"
+	@echo "  validate-recipes     Validate all recipe YAML (98/98 must pass)"
 	@echo "  examples             Run all cargo examples"
 	@echo "  docs-check           Check documentation consistency"
 	@echo "  update-qualifications Update README table from CSV"
