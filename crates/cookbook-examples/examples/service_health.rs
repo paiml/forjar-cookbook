@@ -30,24 +30,26 @@ resources:
     machine: app
     name: nginx
     enabled: true
-    health_check: "curl -sf http://localhost/health"
-    restart_policy: on-failure
-    restart_delay: 5
+    health_check:
+      command: "curl -sf http://localhost/health"
+      interval: 30
   api-service:
     type: service
     machine: app
     name: api
     enabled: true
-    health_check: "curl -sf http://localhost:8080/ready"
-    restart_policy: always
-    restart_delay: 10
+    health_check:
+      command: "curl -sf http://localhost:8080/ready"
+      interval: 30
     depends_on: [web-server]
   worker:
     type: service
     machine: app
     name: worker
     enabled: true
-    health_check: "pgrep -f worker"
+    health_check:
+      command: "pgrep -f worker"
+      interval: 30
     depends_on: [api-service]
 "#,
     )
@@ -72,9 +74,9 @@ resources:
     let r = run_forjar(&["plan-compact", "-f", &f]);
     report("plan", &r, &mut failures);
 
-    eprintln!("Step 5: Test (check scripts)");
-    let r = run_forjar(&["test", "-f", &f]);
-    report("test", &r, &mut failures);
+    eprintln!("Step 5: Lint");
+    let r = run_forjar(&["lint", "-f", &f]);
+    report("lint", &r, &mut failures);
 
     eprintln!("Step 6: Suggest improvements");
     let r = run_forjar(&["suggest", "-f", &f]);

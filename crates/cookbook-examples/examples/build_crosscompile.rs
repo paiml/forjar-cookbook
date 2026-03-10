@@ -40,13 +40,10 @@ resources:
   compile-app:
     type: task
     machine: build-x86
-    task_mode: build
+    task_mode: batch
     command: "cargo build --release --target aarch64-unknown-linux-gnu"
     working_dir: /home/ci/app
-    output_artifacts:
-      - target/aarch64-unknown-linux-gnu/release/myapp
     depends_on: [build-tools]
-    build_machine: build-x86
   deploy-binary:
     type: github_release
     machine: jetson

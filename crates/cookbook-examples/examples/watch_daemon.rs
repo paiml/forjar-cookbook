@@ -65,7 +65,7 @@ resources:
     report("freshness", &r, &mut failures);
 
     eprintln!("Step 6: Data validation");
-    let r = run_forjar(&["data-validate", "-f", &f, "--state-dir", &sd]);
+    let r = run_forjar(&["data-validate", "-f", &f]);
     report("data-validate", &r, &mut failures);
 
     let _ = std::fs::remove_dir_all(&tmp);

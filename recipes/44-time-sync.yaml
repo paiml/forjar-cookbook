@@ -70,7 +70,6 @@ resources:
     type: service
     machine: time-host
     name: chrony
-    running: true
     enabled: true
     restart_on: [chrony-config]
     depends_on: [chrony-config]

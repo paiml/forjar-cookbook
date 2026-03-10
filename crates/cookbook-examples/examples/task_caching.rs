@@ -28,7 +28,7 @@ resources:
   compile-app:
     type: task
     machine: build
-    task_mode: build
+    task_mode: batch
     command: "cargo build --release"
     working_dir: /home/ci/app
     task_inputs:
@@ -42,7 +42,7 @@ resources:
   run-tests:
     type: task
     machine: build
-    task_mode: test
+    task_mode: batch
     command: "cargo test"
     working_dir: /home/ci/app
     task_inputs:
@@ -54,7 +54,7 @@ resources:
   deploy-artifact:
     type: task
     machine: build
-    task_mode: deploy
+    task_mode: batch
     command: "cp target/release/myapp /opt/bin/"
     working_dir: /home/ci/app
     depends_on: [run-tests]

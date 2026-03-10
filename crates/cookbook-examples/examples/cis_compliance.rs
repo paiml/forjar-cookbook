@@ -59,6 +59,8 @@ resources:
       net.ipv4.ip_forward=0
       net.ipv4.conf.all.send_redirects=0
       kernel.randomize_va_space=2
+    owner: root
+    mode: "0644"
     sudo: true
 policies:
   - type: require

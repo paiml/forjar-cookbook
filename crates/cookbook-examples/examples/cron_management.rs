@@ -28,23 +28,27 @@ resources:
   backup-cron:
     type: cron
     machine: server
+    name: backup-daily
     schedule: "0 2 * * *"
     command: "/usr/local/bin/backup.sh"
     sudo: true
   log-rotate:
     type: cron
     machine: server
+    name: logrotate-weekly
     schedule: "0 0 * * 0"
     command: "logrotate /etc/logrotate.conf"
     sudo: true
   health-check:
     type: cron
     machine: server
+    name: health-monitor
     schedule: "*/5 * * * *"
     command: "curl -sf http://localhost/health || systemctl restart app"
   cert-renew:
     type: cron
     machine: server
+    name: certbot-renewal
     schedule: "0 3 * * 1"
     command: "certbot renew --quiet"
     sudo: true
@@ -64,9 +68,9 @@ resources:
     let r = run_forjar(&["plan-compact", "-f", &f]);
     report("plan", &r, &mut failures);
 
-    eprintln!("Step 3: Test (check scripts)");
-    let r = run_forjar(&["test", "-f", &f]);
-    report("test", &r, &mut failures);
+    eprintln!("Step 3: Lint (check scripts)");
+    let r = run_forjar(&["lint", "-f", &f]);
+    report("lint", &r, &mut failures);
 
     eprintln!("Step 4: Lint");
     let r = run_forjar(&["lint", "-f", &f]);

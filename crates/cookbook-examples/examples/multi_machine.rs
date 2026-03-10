@@ -44,6 +44,7 @@ resources:
     path: /etc/postgresql/16/main/pg_hba.conf
     content: "host all all 10.0.1.0/24 scram-sha-256"
     depends_on: [db-pkg]
+    sudo: true
   cache-pkg:
     type: package
     machine: cache
@@ -60,6 +61,7 @@ resources:
     path: /etc/nginx/conf.d/app.conf
     content: "upstream db { server 10.0.1.20:5432; }"
     depends_on: [web-pkg]
+    sudo: true
 "#,
     )
     .ok();

@@ -48,7 +48,7 @@ resources:
     machine: mount-host
     source: "{{params.nfs_server}}:{{params.nfs_export}}"
     path: "{{params.nfs_mount}}"
-    fs_type: nfs4
+    fstype: nfs4
     options: "{{params.nfs_options}}"
     state: mounted
     tags: [mount, nfs, storage]
@@ -70,7 +70,7 @@ resources:
     machine: mount-host
     source: "{{params.bind_source}}"
     path: "{{params.bind_target}}"
-    fs_type: bind
+    fstype: bind
     options: defaults
     state: mounted
     depends_on: [build-cache-dir]
@@ -83,7 +83,7 @@ resources:
     machine: mount-host
     source: tmpfs
     path: "{{params.tmpfs_mount}}"
-    fs_type: tmpfs
+    fstype: tmpfs
     options: "size={{params.tmpfs_size}},mode=1777"
     state: mounted
     tags: [mount, tmpfs, volatile]

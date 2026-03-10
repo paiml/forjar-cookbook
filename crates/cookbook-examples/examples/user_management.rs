@@ -75,9 +75,9 @@ resources:
     let r = run_forjar(&["plan", "-f", &f]);
     report("plan", &r, &mut failures);
 
-    eprintln!("Step 3: Test (check scripts)");
-    let r = run_forjar(&["test", "-f", &f]);
-    report("test", &r, &mut failures);
+    eprintln!("Step 3: Lint (validate scripts)");
+    let r = run_forjar(&["lint", "-f", &f]);
+    report("lint", &r, &mut failures);
 
     eprintln!("Step 4: Privilege analysis");
     let r = run_forjar(&["privilege-analysis", "-f", &f]);

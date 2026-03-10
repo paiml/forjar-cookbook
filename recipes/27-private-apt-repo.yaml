@@ -132,7 +132,6 @@ resources:
     type: service
     machine: apt-server
     name: nginx
-    running: true
     enabled: true
     restart_on: [nginx-site, nginx-enable]
     depends_on: [nginx-enable]

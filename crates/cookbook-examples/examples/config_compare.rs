@@ -35,6 +35,7 @@ resources:
     machine: web
     path: /etc/app.conf
     content: "port: 8080"
+    sudo: true
 "#,
     )
     .ok();
@@ -60,6 +61,7 @@ resources:
     machine: web
     path: /etc/app.conf
     content: "port: 9090"
+    sudo: true
   redis:
     type: package
     machine: web

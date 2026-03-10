@@ -42,8 +42,8 @@ resources:
     machine: target
     path: "{{params.state_dir}}"
     content: ""
-    check: "test -d {{params.state_dir}}"
-    apply: "mkdir -p {{params.state_dir}}"
+    completion_check: "test -d {{params.state_dir}}"
+    pre_apply: "mkdir -p {{params.state_dir}}"
 
   # Create synthetic event log for testing
   event-log:
@@ -70,4 +70,4 @@ resources:
     machine: target
     command: "forjar drift-predict --state-dir {{params.state_dir}} --json"
     depends_on: [event-log]
-    check: "forjar drift-predict --state-dir {{params.state_dir}} --json | grep -q '\"high_risk\":0'"
+    completion_check: "forjar drift-predict --state-dir {{params.state_dir}} --json | grep -q '\"high_risk\":0'"

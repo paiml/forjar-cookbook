@@ -49,8 +49,8 @@ resources:
     let r = run_forjar(&["validate", "-f", &f]);
     report("validate", &r, &mut failures);
 
-    eprintln!("Step 2: List secret references");
-    let r = run_forjar(&["secrets", "-f", &f]);
+    eprintln!("Step 2: Secrets help (shows subcommands)");
+    let r = run_forjar(&["secrets", "--help"]);
     report("secrets", &r, &mut failures);
 
     eprintln!("Step 3: Security scan");

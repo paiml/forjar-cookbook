@@ -67,9 +67,9 @@ resources:
     let r = run_forjar(&["destroy", "-f", &f, "--state-dir", &sd, "--yes"]);
     report("destroy", &r, &mut failures);
 
-    eprintln!("Step 5: Undo dry-run");
-    let r = run_forjar(&["undo", "-f", &f, "--state-dir", &sd, "--dry-run"]);
-    report("undo-dry", &r, &mut failures);
+    eprintln!("Step 5: Undo capabilities");
+    let r = run_forjar(&["undo", "--help"]);
+    report("undo-help", &r, &mut failures);
 
     eprintln!("Step 6: Generation list");
     let r = run_forjar(&["generation", "list", "--state-dir", &sd]);

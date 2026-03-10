@@ -23,18 +23,26 @@ fn main() -> ExitCode {
         &rulebook_path,
         r#"version: "1.0"
 name: cookbook-demo
-rules:
+rulebooks:
   - name: auto-remediate-drift
-    on: [drift_detected]
-    when: "event.severity == 'critical'"
-    action: "forjar apply -f {{config}} --yes"
+    events:
+      - type: file_changed
+        match:
+          path: /etc/nginx/nginx.conf
+    actions:
+      - script: "echo 'Drift detected, re-applying config'"
+    cooldown_secs: 60
   - name: notify-on-failure
-    on: [apply_failed]
-    action: "echo 'Apply failed: {{event.resource}}'"
+    events:
+      - type: process_exit
+    actions:
+      - script: "echo 'Process exited unexpectedly'"
   - name: metric-alert
-    on: [metric_threshold]
-    when: "event.metric == 'cpu' && event.value > 90"
-    action: "echo 'High CPU: {{event.value}}%'"
+    events:
+      - type: metric_threshold
+    actions:
+      - script: "echo 'Metric threshold crossed'"
+    cooldown_secs: 30
 "#,
     )
     .ok();
@@ -52,7 +60,7 @@ rules:
     let validate = run_forjar(&[
         "rules",
         "validate",
-        "--rulebook",
+        "-f",
         &rulebook_path.display().to_string(),
     ]);
     if validate.success {
@@ -67,7 +75,7 @@ rules:
     let coverage = run_forjar(&[
         "rules",
         "coverage",
-        "--rulebook",
+        "-f",
         &rulebook_path.display().to_string(),
     ]);
     if coverage.success {
@@ -86,12 +94,9 @@ rules:
     eprintln!("\nStep 3: Trigger dry-run (drift_detected)");
     let trigger = run_forjar(&[
         "trigger",
-        "--rulebook",
-        &rulebook_path.display().to_string(),
+        "auto-remediate-drift",
         "-f",
-        &config_path.display().to_string(),
-        "--payload",
-        r#"{"severity":"critical","resource":"nginx"}"#,
+        &rulebook_path.display().to_string(),
         "--dry-run",
     ]);
     if trigger.success {

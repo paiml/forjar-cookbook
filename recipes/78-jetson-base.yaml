@@ -66,10 +66,10 @@ resources:
     resource_group: cleanup
 
   apt-autoremove:
-    type: command
+    type: task
+    task_mode: batch
     machine: jetson
     command: "apt-get autoremove -y && apt-get clean"
-    run_as: root
     depends_on: [purge-bloat]
     tags: [jetson, cleanup]
     resource_group: cleanup
@@ -129,11 +129,10 @@ resources:
 
   # ── Phase 4: Rust toolchain ────────────────────────────────────
   rustup-install:
-    type: command
+    type: task
+    task_mode: batch
     machine: jetson
     command: "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
-    run_as: "{{params.user}}"
-    creates: "{{params.home}}/.cargo/bin/rustup"
     depends_on: [build-deps]
     tags: [jetson, rust]
     resource_group: toolchain
@@ -201,10 +200,10 @@ resources:
 
   # ── Phase 8: CUDA validation ───────────────────────────────────
   cuda-check:
-    type: command
+    type: task
+    task_mode: batch
     machine: jetson
     command: "nvcc --version && nvidia-smi || jetson_clocks --show"
-    run_as: "{{params.user}}"
     depends_on: [build-deps]
     tags: [jetson, validation]
     resource_group: validation

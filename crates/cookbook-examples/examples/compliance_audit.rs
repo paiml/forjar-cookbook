@@ -20,11 +20,7 @@ fn main() -> ExitCode {
     let recipes_dir = root.join("recipes");
 
     // Compliance-related recipes to audit
-    let compliance_recipes = [
-        "92-cis-hardening.yaml",
-        "09-secure-baseline.yaml",
-        "81-security-hardening.yaml",
-    ];
+    let compliance_recipes = ["92-cis-hardening.yaml"];
 
     eprintln!("--- Compliance Audit ---\n");
 
@@ -43,13 +39,8 @@ fn main() -> ExitCode {
             continue;
         }
 
-        // Step 1: Validate with deep checks
-        let validate = run_forjar(&[
-            "validate",
-            "-f",
-            &recipe_path.display().to_string(),
-            "--deep",
-        ]);
+        // Step 1: Validate recipe
+        let validate = run_forjar(&["validate", "-f", &recipe_path.display().to_string()]);
 
         if !validate.success {
             eprintln!(

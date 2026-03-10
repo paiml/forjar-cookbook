@@ -41,6 +41,7 @@ fn write_demo_config(config_path: &Path) {
 name: policy-demo
 machines:
   web-01:
+    hostname: web-01
     addr: 10.0.0.1
     user: deploy
 resources:
@@ -51,6 +52,7 @@ resources:
     owner: root
     mode: "0644"
     content: "server { listen 80; }"
+    sudo: true
   ssh-config:
     type: file
     machine: web-01
@@ -58,6 +60,7 @@ resources:
     owner: root
     mode: "0600"
     content: "PermitRootLogin no"
+    sudo: true
 policies:
   - name: require-file-owner
     type: require
@@ -123,8 +126,7 @@ fn run_install_pack(tmp: &Path) -> u32 {
     eprintln!("\nStep 4: Install compliance pack");
     let install = run_forjar(&[
         "policy-install",
-        "--pack",
-        "cis-ubuntu",
+        "cis-ubuntu-22",
         "--output-dir",
         &pack_dir.display().to_string(),
     ]);

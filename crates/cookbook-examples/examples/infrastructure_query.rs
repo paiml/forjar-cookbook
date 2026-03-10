@@ -41,6 +41,7 @@ resources:
     path: /etc/nginx/nginx.conf
     content: "worker_processes auto;"
     depends_on: [nginx-pkg]
+    sudo: true
     tags: [tier:frontend, env:prod]
   nginx-svc:
     type: service
@@ -61,6 +62,7 @@ resources:
     path: /etc/postgresql/16/main/pg_hba.conf
     content: "host all all 10.0.1.0/24 scram-sha-256"
     depends_on: [pg-pkg]
+    sudo: true
     tags: [tier:backend, env:prod]
 "#,
     )

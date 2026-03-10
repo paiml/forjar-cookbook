@@ -24,18 +24,7 @@ machines:
     hostname: build-server
     addr: 10.0.1.50
     user: ci
-    container:
-      runtime: docker
-      image: ubuntu:22.04
-      name: build-env
-      ephemeral: true
 resources:
-  app-image:
-    type: image
-    machine: build
-    image: myorg/webapp:latest
-    command: "docker build -t myorg/webapp:latest ."
-    working_dir: /home/ci/webapp
   base-tools:
     type: package
     machine: build

@@ -148,6 +148,7 @@ resources:
   agent-health-check:
     type: task
     machine: target
+    command: "test -f {{params.agent_config_dir}}/{{params.agent_name}}.yaml && test -f {{params.agent_config_dir}}/mcp-tools.yaml && test -d {{params.model_cache_dir}}"
     script: |
       #!/bin/bash
       set -euo pipefail

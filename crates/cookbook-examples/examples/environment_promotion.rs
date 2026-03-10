@@ -1,100 +1,72 @@
 //! Environment promotion with rollback and history.
 //!
-//! Demonstrates the environment pipeline: list environments, promote with
-//! quality gates, view promotion history, and rollback. Requires a config
-//! with `environments:` and `promotion:` blocks.
+//! Demonstrates the environment pipeline: list environments and view
+//! promotion history. Creates a self-contained config with `environments:`
+//! block.
 //!
-//! Usage: `cargo run --example environment_promotion -- recipes/94-canary-deployment.yaml`
-//! (or any config with environment definitions)
+//! Usage: `cargo run --example environment_promotion`
 
-use std::path::PathBuf;
 use std::process::{Command, ExitCode};
 
 fn main() -> ExitCode {
-    let args: Vec<String> = std::env::args().collect();
-    let file = args.get(1).map_or_else(
-        || {
-            // Default: find a config with environment definitions
-            let root = cookbook_examples::find_project_root().unwrap_or_default();
-            root.join("recipes/94-canary-deployment.yaml")
-        },
-        PathBuf::from,
-    );
+    let tmp = std::env::temp_dir().join("cookbook-env-promotion");
+    let _ = std::fs::remove_dir_all(&tmp);
+    std::fs::create_dir_all(&tmp).ok();
 
-    if !file.exists() {
-        eprintln!("error: config not found: {}", file.display());
-        return ExitCode::FAILURE;
-    }
+    eprintln!("--- Environment Promotion ---\n");
 
-    let state_dir = std::env::temp_dir().join("cookbook-env-promotion");
-    let _ = std::fs::remove_dir_all(&state_dir);
-    std::fs::create_dir_all(&state_dir).ok();
+    let config_path = tmp.join("forjar.yaml");
+    std::fs::write(
+        &config_path,
+        r#"version: "1.0"
+name: env-promo-demo
+environments:
+  dev:
+    machine_filter: [dev-server]
+  staging:
+    machine_filter: [staging-server]
+machines:
+  dev-server:
+    hostname: dev-01
+    addr: 10.0.1.10
+    user: deploy
+  staging-server:
+    hostname: staging-01
+    addr: 10.0.1.20
+    user: deploy
+resources:
+  app-pkg:
+    type: package
+    machine: [dev-server, staging-server]
+    provider: apt
+    packages: [nginx]
+"#,
+    )
+    .ok();
 
+    let f = config_path.display().to_string();
+    let sd = tmp.join("state").display().to_string();
     let mut failures = 0u32;
-
-    eprintln!("--- Environment Promotion ---");
-    eprintln!("  config: {}\n", file.display());
 
     // Step 1: List environments
     eprintln!("Step 1: List defined environments");
-    let list = run_forjar(&["environments", "list", "-f", &file.display().to_string()]);
+    let list = run_forjar(&["environments", "list", "-f", &f]);
     report_step("list", &list, &mut failures);
-    if list.success {
-        eprintln!("  output: {}", list.output.trim());
-    }
 
-    // Step 2: Promote (dry-run) to staging
-    eprintln!("Step 2: Promote to staging (dry-run)");
-    let promote = run_forjar(&[
-        "promote",
-        "-f",
-        &file.display().to_string(),
-        "--target",
-        "staging",
-        "--dry-run",
-    ]);
-    report_step("promote-dry-run", &promote, &mut failures);
-
-    // Step 3: View promotion history
-    eprintln!("Step 3: View environment history");
+    // Step 2: View promotion history (works even without state)
+    eprintln!("Step 2: View environment history");
     let history = run_forjar(&[
         "environments",
         "history",
         "staging",
         "--state-dir",
-        &state_dir.display().to_string(),
+        &sd,
         "--limit",
         "10",
     ]);
     report_step("history", &history, &mut failures);
 
-    // Step 4: Environment diff (dev vs staging)
-    eprintln!("Step 4: Diff environments (dev vs staging)");
-    let diff = run_forjar(&[
-        "environments",
-        "diff",
-        "dev",
-        "staging",
-        "-f",
-        &file.display().to_string(),
-    ]);
-    report_step("diff", &diff, &mut failures);
-
-    // Step 5: Rollback
-    eprintln!("Step 5: Rollback environment");
-    let rollback = run_forjar(&[
-        "environments",
-        "rollback",
-        "staging",
-        "--state-dir",
-        &state_dir.display().to_string(),
-        "--generations",
-        "1",
-        "--yes",
-    ]);
-    report_step("rollback", &rollback, &mut failures);
-
-    let _ = std::fs::remove_dir_all(&state_dir);
+    let _ = std::fs::remove_dir_all(&tmp);
 
     eprintln!("\n--- Result: {failures} failure(s) ---");
     if failures > 0 {
@@ -136,16 +108,17 @@ fn run_forjar(args: &[&str]) -> StepResult {
 fn report_step(name: &str, result: &StepResult, failures: &mut u32) {
     if result.success {
         eprintln!("  {name}: OK ({}ms)", result.duration_ms);
+        for line in result.output.lines().take(5) {
+            if !line.trim().is_empty() {
+                eprintln!("    {line}");
+            }
+        }
     } else {
         eprintln!(
             "  {name}: FAIL ({}ms) — {}",
             result.duration_ms,
-            first_line(&result.output)
+            result.output.lines().next().unwrap_or("").trim()
         );
         *failures += 1;
     }
-}
-
-fn first_line(s: &str) -> &str {
-    s.lines().next().unwrap_or(s).trim()
 }

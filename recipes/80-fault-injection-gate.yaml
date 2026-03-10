@@ -101,4 +101,4 @@ resources:
     machine: target
     command: "forjar cost-estimate -f {{params.config_path}} --json"
     depends_on: [sample-config]
-    check: "forjar cost-estimate -f {{params.config_path}} --json | grep -q 'est_seconds'"
+    completion_check: "forjar cost-estimate -f {{params.config_path}} --json | grep -q 'est_seconds'"

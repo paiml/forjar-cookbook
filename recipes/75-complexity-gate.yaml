@@ -61,7 +61,7 @@ resources:
     machine: target
     command: "forjar complexity -f {{params.config_path}} --json"
     depends_on: [sample-config]
-    check: "forjar complexity -f {{params.config_path}} --json | grep -q '\"grade\":\"[ABC]\"'"
+    completion_check: "forjar complexity -f {{params.config_path}} --json | grep -q '\"grade\":\"[ABC]\"'"
 
   # Run impact analysis on key resources
   impact-check:

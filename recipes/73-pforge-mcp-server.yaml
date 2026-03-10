@@ -118,6 +118,7 @@ resources:
   pforge-health-check:
     type: task
     machine: target
+    command: "command -v forjar && test -f /etc/forjar/pforge.yaml && test -d {{params.state_dir}}"
     script: |
       #!/bin/bash
       set -euo pipefail

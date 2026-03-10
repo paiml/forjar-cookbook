@@ -69,7 +69,7 @@ resources:
     machine: target
     command: "forjar impact -f {{params.config_path}} -r db-pkg --json"
     depends_on: [multi-config]
-    check: "forjar impact -f {{params.config_path}} -r db-pkg --json | grep -vq '\"risk\":\"critical\"'"
+    completion_check: "forjar impact -f {{params.config_path}} -r db-pkg --json | grep -vq '\"risk\":\"critical\"'"
 
   # Analyze impact of changing the web config (should be safe)
   impact-web:

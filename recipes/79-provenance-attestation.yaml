@@ -93,7 +93,7 @@ resources:
     machine: target
     command: "forjar prove -f {{params.config_path}}"
     depends_on: [sample-config]
-    check: "forjar prove -f {{params.config_path}} 2>&1 | grep -q 'passed'"
+    completion_check: "forjar prove -f {{params.config_path}} 2>&1 | grep -q 'passed'"
 
   # Generate SLSA provenance attestation
   provenance:
@@ -101,7 +101,7 @@ resources:
     machine: target
     command: "forjar provenance -f {{params.config_path}} --json"
     depends_on: [sample-config]
-    check: "forjar provenance -f {{params.config_path}} --json | grep -q 'blake3'"
+    completion_check: "forjar provenance -f {{params.config_path}} --json | grep -q 'blake3'"
 
   # Show Merkle DAG lineage — content-addressed config tree
   lineage:
@@ -109,7 +109,7 @@ resources:
     machine: target
     command: "forjar lineage -f {{params.config_path}}"
     depends_on: [sample-config]
-    check: "forjar lineage -f {{params.config_path}} 2>&1 | grep -q 'Merkle root'"
+    completion_check: "forjar lineage -f {{params.config_path}} 2>&1 | grep -q 'Merkle root'"
 
   # Privilege analysis — least-privilege audit
   privilege-audit:

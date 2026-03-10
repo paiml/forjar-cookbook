@@ -131,4 +131,4 @@ resources:
     machine: target
     command: "echo 'Security gate check'"
     depends_on: [security-scan]
-    check: "forjar security-scan -f {{params.config_path}} --json | grep -vq '\"critical\"'"
+    completion_check: "forjar security-scan -f {{params.config_path}} --json | grep -vq '\"critical\"'"

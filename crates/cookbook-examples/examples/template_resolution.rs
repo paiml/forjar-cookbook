@@ -24,6 +24,7 @@ params:
   app_port: "8080"
   app_name: "myapi"
   deploy_dir: "/opt/deploy"
+  app_host: "127.0.0.1"
 machines:
   local:
     hostname: localhost
@@ -37,7 +38,7 @@ resources:
     content: |
       name: {{params.app_name}}
       port: {{params.app_port}}
-      host: {{machines.local.addr}}
+      host: {{params.app_host}}
   app-svc:
     type: service
     machine: local
@@ -91,7 +92,7 @@ resources:
     report("show", &r, &mut failures);
 
     eprintln!("Step 3: Explain resource resolution");
-    let r = run_forjar(&["explain", "-f", &f, "--resource", "app-config"]);
+    let r = run_forjar(&["explain", "app-config", "-f", &f]);
     report("explain", &r, &mut failures);
 
     eprintln!("Step 4: Template recipe expansion");

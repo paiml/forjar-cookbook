@@ -43,17 +43,15 @@ machines:
 resources:
   app-pkg:
     type: package
-    machine: canary, web-01, web-02, web-03
+    machine: [canary, web-01, web-02, web-03]
     provider: apt
     packages: [nginx]
   app-config:
     type: file
-    machine: canary, web-01, web-02, web-03
-    path: /etc/nginx/conf.d/app.conf
+    machine: [canary, web-01, web-02, web-03]
+    path: /var/www/app/config.yaml
     content: "server { listen 80; root /var/www/app; }"
     depends_on: [app-pkg]
-policy:
-  parallel_resources: true
 "#,
     )
     .ok();
