@@ -708,6 +708,7 @@ dependencies = [
  "sha2",
  "tar",
  "tokio",
+ "toml 0.8.23",
  "zip",
  "zstd",
 ]

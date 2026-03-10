@@ -19,6 +19,18 @@ cargo run --example validate_all
 # Plan all recipes (dry-run)
 cargo run --example plan_all
 
+# Plugin install/verify/remove lifecycle
+cargo run --example plugin_lifecycle
+
+# Environment promotion with rollback and history
+cargo run --example environment_promotion -- recipes/94-canary-deployment.yaml
+
+# Compliance pack audit against hardening recipes
+cargo run --example compliance_audit
+
+# System metric snapshot with validation timing
+cargo run --example metric_snapshot
+
 # Qualify a single recipe on the runner
 make qualify-recipe RECIPE=01
 
@@ -40,7 +52,7 @@ make update-qualifications
 ## Qualification Dashboard
 
 <!-- QUALIFICATION_TABLE_START -->
-**Qualification Summary** (updated: 2026-03-08 13:19 UTC)
+**Qualification Summary** (updated: 2026-03-09 14:49 UTC)
 
 | Status | Count |
 |--------|-------|
@@ -53,8 +65,8 @@ make update-qualifications
 | Grade | Count |
 |-------|-------|
 | A | 0 |
-| B | 54 |
-| C | 18 |
+| B | 55 |
+| C | 17 |
 | D | 1 |
 | F | 0 |
 
@@ -126,7 +138,7 @@ make update-qualifications
 | 89 | postgresql-replication | infra | ![pending](https://img.shields.io/badge/PENDING-lightgray) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | — | — | 41 | — |
 | 90 | haproxy-ha | infra | ![pending](https://img.shields.io/badge/PENDING-lightgray) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | — | — | 41 | — |
 | 91 | podman-rootless | infra | ![pending](https://img.shields.io/badge/PENDING-lightgray) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | — | — | 40 | — |
-| 92 | cis-hardening | infra | ![pending](https://img.shields.io/badge/PENDING-lightgray) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | — | — | 40 | — |
+| 92 | cis-hardening | infra | ![pending](https://img.shields.io/badge/PENDING-lightgray) | ![B](https://img.shields.io/badge/B-blue) | 2+3 | Strong | — | — | 43 | — |
 | 93 | k3s-cluster | infra | ![pending](https://img.shields.io/badge/PENDING-lightgray) | ![D](https://img.shields.io/badge/D-orange) | 2+3 | Strong | — | — | 32 | — |
 | 94 | canary-deployment | devops | ![pending](https://img.shields.io/badge/PENDING-lightgray) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | — | — | 32 | — |
 | 95 | otel-collector | infra | ![pending](https://img.shields.io/badge/PENDING-lightgray) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | — | — | 34 | — |
