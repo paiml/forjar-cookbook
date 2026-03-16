@@ -682,7 +682,9 @@ checksum = "00b0228411908ca8685dba7fc2cdd70ec9990a6e753e89b6ac91a84c40fbaf4b"
 
 [[package]]
 name = "forjar"
-version = "1.1.1"
+version = "1.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "462519341bc3aadc22181d83dfc3a25166f01ac0683f1ffe0f7106be601c7c7a"
 dependencies = [
  "async-trait",
  "base64",
@@ -694,6 +696,7 @@ dependencies = [
  "flate2",
  "glob",
  "indexmap",
+ "openssl",
  "pforge-config",
  "pforge-runtime",
  "provable-contracts",
