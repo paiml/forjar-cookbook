@@ -60,3 +60,55 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: ./scripts/check-docs-consistency.sh
+
+  # Emits the status context `gate`, which the paiml org ruleset "Green Main"
+  # (id 13878864) requires on every PR. No workflow here emitted it, so PRs sat
+  # at mergeStateStatus BLOCKED with every visible check green and no way for a
+  # contributor to fix it. This job is an aggregator, not a rubber stamp: it
+  # fails if ANY upstream CI job did not succeed, and it fails if it is not
+  # aggregating every job in this workflow (so adding a job without wiring it
+  # here is a hard error, never a silent hole in the gate).
+  gate:
+    name: gate
+    runs-on: ubuntu-latest
+    needs: [check, test, coverage, validate-recipes, score, docs]
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+      - name: Aggregate CI job results
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re, sys
+
+          needs = json.loads(os.environ["NEEDS_JSON"])
+
+          # Denominator 1: this gate must depend on every other job in ci.yml.
+          text = open(".github/workflows/ci.yml").read()
+          _, _, jobs_section = text.partition("\njobs:\n")
+          if not jobs_section:
+              sys.exit("FAIL: could not locate the jobs: block in .github/workflows/ci.yml")
+          declared = {m.group(1) for m in re.finditer(r"^  ([A-Za-z0-9_-]+):", jobs_section, re.M)}
+          declared.discard("gate")
+          if not declared:
+              sys.exit("FAIL: parsed 0 jobs from .github/workflows/ci.yml")
+
+          aggregated = set(needs)
+          print(f"ci.yml declares {len(declared)} job(s) besides gate; gate aggregates {len(aggregated)}.")
+          missing = sorted(declared - aggregated)
+          unknown = sorted(aggregated - declared)
+          if missing:
+              sys.exit(f"FAIL: gate does not depend on {len(missing)} CI job(s): {', '.join(missing)}")
+          if unknown:
+              sys.exit(f"FAIL: gate depends on {len(unknown)} job(s) not in ci.yml: {', '.join(unknown)}")
+
+          # Denominator 2: every aggregated job must have actually succeeded.
+          for name, res in sorted(needs.items()):
+              print(f"  {name}: {res['result']}")
+          bad = sorted(n for n, r in needs.items() if r["result"] != "success")
+          if bad:
+              sys.exit(f"FAIL: {len(bad)} of {len(needs)} CI job(s) did not succeed: {', '.join(bad)}")
+
+          print(f"OK: {len(needs)} of {len(needs)} CI job(s) succeeded.")
+          PY
