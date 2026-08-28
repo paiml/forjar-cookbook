@@ -10,7 +10,7 @@ on:
 
 jobs:
   qualify:
-    runs-on: self-hosted
+    runs-on: [self-hosted, clean-room]
     steps:
       - uses: actions/checkout@v4
 
