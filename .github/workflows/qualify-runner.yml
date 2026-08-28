@@ -10,12 +10,43 @@ on:
 
 jobs:
   qualify:
-    runs-on: self-hosted
+    runs-on: [self-hosted, clean-room]
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install forjar (latest from source)
-        run: cargo install --path ../forjar --locked
+      # ASSERT the toolchain; do not install it.
+      #
+      # This was `cargo install --path ../forjar --locked`, which is wrong three
+      # times over on a self-hosted runner:
+      #
+      #   1. `../forjar` is OUTSIDE $GITHUB_WORKSPACE. Hardened checkout does not
+      #      place sibling repos there, so the path resolves to nothing — which
+      #      is why all 6 runs of this workflow have FAILED (last: 2026-03-10).
+      #   2. With no `--root`, it installs into the shared ~/.cargo/bin. All 16
+      #      intel-clean-room runners share HOME=/home/noah, so that directory is
+      #      the FLEET'S PROVISIONED TOOLCHAIN. Had this step ever worked, it
+      #      would have replaced the fleet's pinned forjar with whatever happened
+      #      to be in a sibling checkout — silently making the version pin in
+      #      machines/*/forjar.yaml fiction.
+      #   3. It triggers on `push` to recipes/** and configs/**, so ordinary
+      #      content edits would have carried it.
+      #
+      # forjar is provisioned on these hosts by forjar itself, pinned in
+      # paiml/infra machines/*/forjar.yaml. A consumer asserts it is there. This
+      # is the same rule the fleet's pre-job hook states: "This hook asserts the
+      # toolchain; it no longer installs it."
+      #
+      # `--version` rather than `command -v`: the latter is satisfied by a
+      # dangling symlink, which is exactly the state a CI cache-prune leaves in a
+      # shared ~/.cargo/bin (paiml/infra#208).
+      - name: Assert forjar is provisioned on this runner
+        run: |
+          forjar --version || {
+            echo "FATAL: forjar is not provisioned on this runner." >&2
+            echo "  Remediate on the host, not per job:" >&2
+            echo "    forjar apply -f machines/intel/forjar.yaml -t stack-tools --refresh" >&2
+            exit 1
+          }
 
       - name: Qualify recipes
         run: |
