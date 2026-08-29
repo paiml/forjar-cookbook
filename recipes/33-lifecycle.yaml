@@ -85,6 +85,29 @@ resources:
     resource_group: app
 
   # Externally-managed config — ignore content drift
+  # ignore_drift: THE WHOLE RESOURCE, and that is the only thing it can mean.
+  #
+  # This recipe used to say `ignore_drift: [content]`, which reads as "let an
+  # external process own the file's contents while forjar still guards its owner
+  # and mode". forjar does not implement per-field suppression, and as of 1.21.0
+  # it REFUSES the config rather than accepting it and quietly suppressing
+  # everything (forjar#335):
+  #
+  #   error: resource 'external-config' has lifecycle.ignore_drift ["content"],
+  #   but per-field drift suppression is not implemented — forjar would suppress
+  #   ALL drift for this resource, not just those fields. Write
+  #   ignore_drift: ["*"] if you mean that, or remove the key to keep drift
+  #   detection on.
+  #
+  # That refusal is correct and this recipe was the thing in the wrong: it taught
+  # a field list that never narrowed anything, on every reader who copied it.
+  # 1.20.1 accepted it silently; 1.21.0 does not, which is how it surfaced.
+  #
+  # `["*"]` is the honest spelling. It says: forjar writes this file once and
+  # then stops watching it entirely — content, owner AND mode. If you need forjar
+  # to keep guarding mode and ownership while something else edits the body,
+  # there is no way to express that today; split the file, or drop the key and
+  # let drift report.
   external-config:
     type: file
     machine: target
@@ -92,12 +115,12 @@ resources:
     owner: root
     mode: '0644'
     content: |
-      # Managed by forjar — lifecycle test (ignore drift on content)
-      # Content managed by external process
+      # Managed by forjar — lifecycle test (drift ignored for this resource)
+      # Seeded by forjar, then owned by an external process
       replica_count=3
     lifecycle:
       ignore_drift:
-        - content
+        - "*"
     tags: [lifecycle, app, external]
     resource_group: app
 
@@ -111,7 +134,7 @@ resources:
       {
         "protected_resources": ["db-data-dir", "db-config"],
         "create_before_destroy": ["app-config"],
-        "ignore_drift": {"external-config": ["content"]},
+        "ignore_drift": {"external-config": ["*"]},
         "lifecycle_version": "1.0"
       }
     depends_on: [db-config, app-config, external-config]
