@@ -10,19 +10,80 @@ on:
 
 jobs:
   qualify:
-    runs-on: self-hosted
+    # PIN THE POOL. A bare `runs-on: self-hosted` matches ANY self-hosted runner
+    # in the org, and gx10 is an aarch64 GB10 training node that must be
+    # available on request and never by default (paiml/infra#352). This job
+    # wants x86_64 clean-room capacity, and naming it is the difference between
+    # "the CI pool" and "whatever answers first".
+    #
+    # Found by machines/clean-room/gx10-opt-in-guard.sh, which BLOCKS registering
+    # gx10 at org scope while any workflow in the org can capture it implicitly:
+    #
+    #   gx10-opt-in: scope=org, 505 workflow(s) scanned, 26 finding(s)
+    #   forjar-cookbook/.github/workflows/qualify-runner.yml:13: runs-on: self-hosted
+    #       reaches gx10 without naming `gpu`
+    runs-on: [self-hosted, clean-room]
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install forjar (latest from source)
-        run: cargo install --path ../forjar --locked
+      # ASSERT the toolchain; do not install it.
+      #
+      # This was `cargo install --path ../forjar --locked`, which is wrong three
+      # times over on a self-hosted runner:
+      #
+      #   1. `../forjar` is OUTSIDE $GITHUB_WORKSPACE. Hardened checkout does not
+      #      place sibling repos there, so the path resolves to nothing — which
+      #      is why all 6 runs of this workflow have FAILED (last: 2026-03-10).
+      #   2. With no `--root`, it installs into the shared ~/.cargo/bin. All 16
+      #      intel-clean-room runners share HOME=/home/noah, so that directory is
+      #      the FLEET'S PROVISIONED TOOLCHAIN. Had this step ever worked, it
+      #      would have replaced the fleet's pinned forjar with whatever happened
+      #      to be in a sibling checkout — silently making the version pin in
+      #      machines/*/forjar.yaml fiction.
+      #   3. It triggers on `push` to recipes/** and configs/**, so ordinary
+      #      content edits would have carried it.
+      #
+      # forjar is provisioned on these hosts by forjar itself, pinned in
+      # paiml/infra machines/*/forjar.yaml. A consumer asserts it is there. This
+      # is the same rule the fleet's pre-job hook states: "This hook asserts the
+      # toolchain; it no longer installs it."
+      #
+      # `--version` rather than `command -v`: the latter is satisfied by a
+      # dangling symlink, which is exactly the state a CI cache-prune leaves in a
+      # shared ~/.cargo/bin (paiml/infra#208).
+      - name: Assert forjar is provisioned on this runner
+        run: |
+          forjar --version || {
+            echo "FATAL: forjar is not provisioned on this runner." >&2
+            echo "  Remediate on the host, not per job:" >&2
+            echo "    forjar apply -f machines/intel/forjar.yaml -t stack-tools --refresh" >&2
+            exit 1
+          }
 
       - name: Qualify recipes
+        env:
+          # `inputs.recipe` IS EMPTY ON A PUSH. The `default: 'all'` under
+          # workflow_dispatch applies only to a dispatch; a `push:` run leaves it
+          # unset, the `if` below took the else branch, and the job ran
+          #
+          #     make qualify-recipe RECIPE=
+          #
+          # which prints `Usage: make qualify-recipe RECIPE=01` and exits 1. This
+          # workflow ALSO triggers on `push: paths: ['recipes/**', 'configs/**']`,
+          # so every push that touches a recipe has been running a job that
+          # cannot succeed. It went unnoticed because nothing had edited a recipe
+          # in a while; the first commit here that did is what surfaced it.
+          #
+          # A gate that CANNOT pass is worse than no gate: it gets ignored, and
+          # the real findings arrive through the same hole.
+          RECIPE: ${{ inputs.recipe || 'all' }}
         run: |
-          if [ "${{ inputs.recipe }}" = "all" ]; then
+          set -euo pipefail
+          echo "qualifying: $RECIPE"
+          if [ "$RECIPE" = "all" ]; then
             ./scripts/qualify-all.sh
           else
-            make qualify-recipe RECIPE=${{ inputs.recipe }}
+            make qualify-recipe "RECIPE=$RECIPE"
           fi
 
       - name: Update qualification dashboard
