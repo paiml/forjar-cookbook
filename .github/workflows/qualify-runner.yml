@@ -10,7 +10,19 @@ on:
 
 jobs:
   qualify:
-    runs-on: self-hosted
+    # PIN THE POOL. A bare `runs-on: self-hosted` matches ANY self-hosted runner
+    # in the org, and gx10 is an aarch64 GB10 training node that must be
+    # available on request and never by default (paiml/infra#352). This job
+    # wants x86_64 clean-room capacity, and naming it is the difference between
+    # "the CI pool" and "whatever answers first".
+    #
+    # Found by machines/clean-room/gx10-opt-in-guard.sh, which BLOCKS registering
+    # gx10 at org scope while any workflow in the org can capture it implicitly:
+    #
+    #   gx10-opt-in: scope=org, 505 workflow(s) scanned, 26 finding(s)
+    #   forjar-cookbook/.github/workflows/qualify-runner.yml:13: runs-on: self-hosted
+    #       reaches gx10 without naming `gpu`
+    runs-on: [self-hosted, clean-room]
     steps:
       - uses: actions/checkout@v4
 
