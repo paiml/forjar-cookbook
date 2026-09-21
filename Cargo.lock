@@ -633,9 +633,9 @@ checksum = "d9c4f5dac5e15c24eb999c26181a6ca40b39fe946cbe4c263c7209467bc83af2"
 
 [[package]]
 name = "forjar"
-version = "1.31.0"
+version = "1.32.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0eb01c577a544df73e28cf47860ae3b9ed9e92b3224d81020ac72a4877575c98"
+checksum = "d0d16af7510e0268803a497e25d8e686839782e397cf51d1748cc83d3e2e482c"
 dependencies = [
  "base64 0.22.1",
  "bashrs",
