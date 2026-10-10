@@ -96,7 +96,7 @@ roadmap:
   phases: []
   subtasks: []
   estimated_effort: null
-  labels: []
+  labels: ['release:v1.34.0', 'epic:E1', 'kind:lifecycle']
   notes: null
 - id: PMAT-007
   github_issue: null
@@ -112,7 +112,7 @@ roadmap:
   phases: []
   subtasks: []
   estimated_effort: null
-  labels: []
+  labels: ['release:v1.34.0', 'epic:E1', 'kind:lifecycle']
   notes: null
 - id: PMAT-008
   github_issue: null
@@ -128,7 +128,7 @@ roadmap:
   phases: []
   subtasks: []
   estimated_effort: null
-  labels: []
+  labels: ['release:v1.34.0', 'epic:E1', 'kind:lifecycle']
   notes: null
 - id: PMAT-009
   github_issue: null
@@ -144,7 +144,7 @@ roadmap:
   phases: []
   subtasks: []
   estimated_effort: null
-  labels: []
+  labels: ['release:v1.34.0', 'epic:E1', 'kind:lifecycle']
   notes: null
 - id: PMAT-010
   github_issue: null
@@ -160,7 +160,7 @@ roadmap:
   phases: []
   subtasks: []
   estimated_effort: null
-  labels: []
+  labels: ['release:v1.34.0', 'epic:E1', 'kind:lifecycle']
   notes: null
 - id: PMAT-011
   github_issue: null
@@ -176,7 +176,7 @@ roadmap:
   phases: []
   subtasks: []
   estimated_effort: null
-  labels: []
+  labels: ['release:v1.34.0', 'epic:E1', 'kind:lifecycle']
   notes: null
 - id: PMAT-012
   github_issue: null
@@ -192,7 +192,7 @@ roadmap:
   phases: []
   subtasks: []
   estimated_effort: null
-  labels: []
+  labels: ['release:v1.34.0', 'epic:E1', 'kind:lifecycle']
   notes: null
 - id: PMAT-013
   github_issue: null
@@ -208,7 +208,7 @@ roadmap:
   phases: []
   subtasks: []
   estimated_effort: null
-  labels: []
+  labels: ['release:v1.34.0', 'epic:E1', 'kind:lifecycle']
   notes: null
 - id: PMAT-014
   github_issue: null
@@ -224,7 +224,7 @@ roadmap:
   phases: []
   subtasks: []
   estimated_effort: null
-  labels: []
+  labels: ['release:v1.34.0', 'epic:E1', 'kind:lifecycle']
   notes: null
 - id: PMAT-015
   github_issue: null
@@ -240,7 +240,7 @@ roadmap:
   phases: []
   subtasks: []
   estimated_effort: null
-  labels: []
+  labels: ['release:v1.34.0', 'epic:E1', 'kind:lifecycle']
   notes: null
 - id: PMAT-016
   github_issue: null
@@ -256,5 +256,24 @@ roadmap:
   phases: []
   subtasks: []
   estimated_effort: null
-  labels: []
+  labels: ['release:v1.34.0', 'epic:E1', 'kind:lifecycle']
   notes: null
+- id: PMAT-017
+  github_issue: null
+  item_type: task
+  title: 'Qualify the cookbook against forjar v1.34.0: lock bump, validate-recipes, record the commit'
+  status: planned
+  priority: high
+  assigned_to: null
+  created: 2026-10-10T11:30:00Z
+  updated: 2026-10-10T11:30:00Z
+  spec: docs/specifications/EPIC-v1.34.0-qualified-plan.md
+  acceptance_criteria:
+  - 'cargo tree -p forjar --depth 0 --locked | grep -q "forjar v1.34.0"'
+  - 'make validate-recipes'
+  - 'forjar docs/roadmaps/releases.yaml row v1.34.0 names this cookbook commit under cookbook:'
+  phases: []
+  subtasks: []
+  estimated_effort: null
+  labels: ['release:v1.34.0', 'epic:E1', 'kind:code']
+  notes: 'Core of epic E1. forjar-cookbook mints no tag of its own; its release is the commit forjar records for v1.34.0.'
