@@ -1,0 +1,15 @@
+train: "v1.35.0"
+epic: E2
+theme: "Qualified for forjar v1.35.0"
+criteria:
+  - {id: T1, pass: "Cargo.lock resolves forjar 1.35.0 and make validate-recipes is green", falsifier: "lock still names 1.34.x", command: "make validate-recipes", ruling: asked}
+  - {id: T2, pass: "qualify CI asserts forjar is present and never installs over the host toolchain", falsifier: "a cargo install of forjar in qualify-runner.yml", command: "grep -n 'cargo install' .github/workflows/qualify-runner.yml", ruling: asked}
+baselines: []
+must_carry: []
+proposed:
+  - {pr: 17, title: "ci(qualify): assert forjar, never install it over the fleet's toolchain", state: "CONFLICTING since 2026-08-28", ticket: proposed, owner: la-v1.35.0}
+  - {item: "recipes for resource types forjar v1.35.0 adds", ticket: proposed, owner: la-v1.35.0}
+staged: []
+questions: []
+risks:
+  - {risk: "forjar tags v1.34.0 before C1 lands", mechanism: "the cut records a stale cookbook commit", tripwire: "releases.yaml v1.34.0 cookbook: commit locks forjar < 1.34.0"}
