@@ -39,7 +39,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Install forjar
-        run: cargo install forjar
+        run: cargo install forjar --locked
       - name: Validate all recipes (98/98 must pass)
         run: cargo run --example validate_all
       - name: Plan all recipes (98/98 must pass)
