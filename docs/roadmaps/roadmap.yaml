@@ -258,3 +258,23 @@ roadmap:
   estimated_effort: null
   labels: []
   notes: null
+- id: PMAT-026
+  github_issue: 26
+  item_type: task
+  title: 'master is red under rustc 1.99: clippy assert_is_empty in qualify table tests, ETXTBSY race in runner fake-forjar tests'
+  status: inprogress
+  priority: high
+  assigned_to: null
+  created: 2026-10-13T16:11:01Z
+  updated: 2026-10-13T16:11:06.208605007+00:00
+  spec: null
+  acceptance_criteria:
+  - 'cargo clippy --workspace --all-targets -- -D warnings passes on rustc 1.99.0 (was 7 x clippy::assert_is_empty: 4 in crates/cookbook-qualify/src/table/tests.rs, 3 in crates/cookbook-examples)'
+  - 'write_test_script in crates/cookbook-runner/src/runner/tests.rs returns only after the fake forjar has exec''d once without ETXTBSY; the fixture wait_until_executable_rides_out_a_lingering_writer passes, and fails with the helper body removed'
+  phases: []
+  subtasks: []
+  estimated_effort: null
+  labels:
+  - kind:code
+  notes: null
+  epic: 25
