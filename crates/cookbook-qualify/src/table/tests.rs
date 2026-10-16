@@ -32,9 +32,9 @@ fn parse_csv_12col_valid() {
     assert_eq!(recipes[0].first_apply_ms, 45000);
     // Extended fields default to 0/empty
     assert_eq!(recipes[0].score, 0);
-    assert!(recipes[0].grade.is_empty());
+    assert_eq!(recipes[0].grade, "");
     assert_eq!(recipes[0].cor, 0);
-    assert!(recipes[0].score_version.is_empty());
+    assert_eq!(recipes[0].score_version, "");
 }
 
 #[test]
@@ -53,7 +53,7 @@ fn parse_csv_12col_pending() {
     let cron = &recipes[3];
     assert_eq!(cron.recipe_num, 40);
     assert_eq!(cron.status, RecipeStatus::Pending);
-    assert!(cron.last_qualified.is_empty());
+    assert_eq!(cron.last_qualified, "");
 }
 
 // ── parse_csv — 23-column extended ───────────────────────────────
@@ -97,7 +97,7 @@ fn parse_csv_23col_empty_scores() {
     let recipes = parse_csv(SAMPLE_CSV_23).unwrap_or_default();
     let pending = &recipes[3];
     assert_eq!(pending.score, 0);
-    assert!(pending.grade.is_empty());
+    assert_eq!(pending.grade, "");
     assert_eq!(pending.cor, 0);
 }
 

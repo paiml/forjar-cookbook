@@ -47,7 +47,7 @@ mod tests {
         let dir = std::env::temp_dir().join("cookbook-test-empty");
         let _ = std::fs::create_dir_all(&dir);
         let files = collect_yaml_files(&dir).unwrap_or_default();
-        assert!(files.is_empty());
+        assert_eq!(files, Vec::<std::path::PathBuf>::new());
         let _ = std::fs::remove_dir(&dir);
     }
 

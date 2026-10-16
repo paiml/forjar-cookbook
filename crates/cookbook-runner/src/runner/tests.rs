@@ -222,8 +222,77 @@ fn write_test_script(succeed_on: &[&str]) -> (tempfile::TempDir, std::path::Path
         // Sync parent directory so the entry is visible to other threads.
         let parent = std::fs::File::open(dir.path()).expect("open dir");
         parent.sync_all().expect("sync dir");
+        wait_until_executable(&script_path);
     }
     (dir, script_path)
+}
+
+/// Block until `path` can be exec'd without ETXTBSY (GH-26).
+///
+/// fsync does not prevent "Text file busy". While the write fd above was
+/// open, a test on another thread may have forked; its child inherits that
+/// fd until it execs, and the kernel refuses to exec an inode that any
+/// process holds open for writing. Our own fd is closed by now, so no NEW
+/// holder can appear: once one exec gets past ETXTBSY, every later exec
+/// does too. Probe until that happens, so the runner under test never
+/// sees the race.
+#[cfg(unix)]
+#[allow(clippy::expect_used, clippy::panic)]
+fn wait_until_executable(path: &std::path::Path) {
+    const ETXTBSY: i32 = 26;
+    for _ in 0..500 {
+        match std::process::Command::new(path)
+            .arg("__probe__")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+        {
+            Err(e) if e.raw_os_error() == Some(ETXTBSY) => {
+                std::thread::sleep(std::time::Duration::from_millis(2));
+            }
+            other => {
+                other.expect("probe exec of fake forjar");
+                return;
+            }
+        }
+    }
+    panic!("{} stayed ETXTBSY for 1s", path.display());
+}
+
+/// GH-26 fixture: a writer that outlives our own close (the inherited fd of a
+/// forked sibling) makes exec fail with ETXTBSY; `wait_until_executable`
+/// must not return until it is gone. With the helper's body removed, the
+/// exec after it fails here deterministically.
+#[cfg(unix)]
+#[test]
+#[allow(clippy::expect_used)]
+fn wait_until_executable_rides_out_a_lingering_writer() {
+    use std::os::unix::fs::PermissionsExt;
+    let dir = tempfile::tempdir().expect("create temp dir");
+    let path = dir.path().join("busy.sh");
+    std::fs::write(&path, "#!/bin/sh\nexit 0\n").expect("write script");
+    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).expect("chmod");
+    let writer = std::fs::OpenOptions::new()
+        .write(true)
+        .open(&path)
+        .expect("hold a write fd");
+    let busy = std::process::Command::new(&path).status();
+    assert_eq!(
+        busy.err().and_then(|e| e.raw_os_error()),
+        Some(26),
+        "an open write fd must make exec fail with ETXTBSY"
+    );
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(50));
+        drop(writer);
+    });
+    wait_until_executable(&path);
+    let after = std::process::Command::new(&path).status();
+    release.join().expect("join writer thread");
+    assert!(
+        after.is_ok_and(|s| s.success()),
+        "exec right after wait_until_executable must succeed"
+    );
 }
 
 #[test]

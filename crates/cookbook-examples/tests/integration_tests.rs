@@ -310,7 +310,7 @@ blocker_description,last_qualified,qualified_by
     assert_eq!(recipes[0].idempotency_class, IdempotencyClass::Weak);
     // Extended fields default to 0/empty
     assert_eq!(recipes[0].score, 0);
-    assert!(recipes[0].grade.is_empty());
+    assert_eq!(recipes[0].grade, "");
 }
 
 #[test]
@@ -329,7 +329,7 @@ blocker_description,last_qualified,qualified_by
 
 #[test]
 fn score_version_is_set() {
-    assert!(!SCORE_VERSION.is_empty());
+    assert_ne!(SCORE_VERSION, "");
 }
 
 // ---------- Grade from composite ----------
