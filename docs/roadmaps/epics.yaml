@@ -1,0 +1,16 @@
+# Epics for forjar-cookbook. One row per epic; `issue` is the GitHub issue
+# labelled `epic` once minted (null until then; roadmap rows carry the label
+# `epic:<id>` meanwhile and gain `epic: <issue#>` when the issue exists).
+#
+# The cookbook has NO version of its own. It moves in lockstep with forjar:
+# its release for forjar vX.Y.Z is the cookbook master commit that forjar's
+# docs/roadmaps/releases.yaml records under `cookbook:` for that tag. A train
+# here is therefore named by forjar's tag, and this repo never creates a tag.
+#
+# Core vs look-ahead is decided by slot, not by a field: core works the open
+# train (E1); one look-ahead slot owns the following train (E2) and keeps its
+# kit at docs/lookahead/<train>.yaml.
+epics:
+  - {id: E1, issue: null, name: "Qualified for forjar v1.34.0", train: "v1.34.0", budget: 3, successor: E2, absorbs: []}
+  - {id: E2, issue: null, name: "Qualified for forjar v1.35.0", train: "v1.35.0", budget: 3, successor: null, absorbs: []}
+  - {id: S1, issue: null, name: "Cookbook hygiene", train: standing, budget: 2, successor: null, absorbs: []}
