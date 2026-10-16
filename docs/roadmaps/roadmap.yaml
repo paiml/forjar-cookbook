@@ -297,3 +297,22 @@ roadmap:
   - kind:code
   notes: null
   epic: 25
+- id: PMAT-028
+  github_issue: 28
+  item_type: task
+  title: 'validate-recipes red on master and every PR: cargo install forjar 1.33.0 fails, its zip ^2 requirement is entirely yanked'
+  status: planned
+  priority: high
+  assigned_to: null
+  created: 2026-10-16T14:37:17Z
+  updated: 2026-10-16T14:37:17Z
+  spec: null
+  acceptance_criteria:
+  - ci.yml installs forjar with an unlocked cargo install. forjar 1.33.0 requires zip ^2 and all of 2.x is yanked. --locked uses the shipped Cargo.lock (zip 2.4.2).
+  phases: []
+  subtasks: []
+  estimated_effort: null
+  labels:
+  - kind:code
+  notes: null
+  epic: 25
