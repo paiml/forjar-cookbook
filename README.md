@@ -1,3 +1,11 @@
+---
+schema_version: "1.0"
+kind: library
+entrypoints: [Cargo.toml]
+contract_count: 1
+---
+<!-- CONTRACT_COUNT_START -->1<!-- CONTRACT_COUNT_END -->
+
 <p align="center">
   <img src="assets/hero.svg" alt="Forjar Cookbook" width="900"/>
 </p>
@@ -12,13 +20,17 @@ then retry and mark it qualified.
 
 ## Quick Start
 
+What CI actually runs on every PR and push (`.github/workflows/ci.yml`,
+`validate-recipes` and `score` jobs):
+
 ```bash
-# Validate all recipes
 cargo run --example validate_all
-
-# Plan all recipes (dry-run)
 cargo run --example plan_all
+```
 
+More to explore locally (illustrative; not CI claims):
+
+```text
 # Plugin install/verify/remove lifecycle
 cargo run --example plugin_lifecycle
 
@@ -146,6 +158,36 @@ make update-qualifications
 | 97 | task-pipeline-gates | platform | ![pending](https://img.shields.io/badge/PENDING-lightgray) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | — | — | 41 | — |
 | 98 | recipe-signing | platform | ![pending](https://img.shields.io/badge/PENDING-lightgray) | ![C](https://img.shields.io/badge/C-yellow) | 2+3 | Strong | — | — | 41 | — |
 <!-- QUALIFICATION_TABLE_END -->
+
+## pv-readme Contract
+
+This README carries frontmatter (`schema_version`, `kind`, `entrypoints`,
+`contract_count`) and is graded by `contracts/readme-root.yaml` against the
+`pv-readme` SHACL shape (`readme:Readme`, #34).
+
+- **Claim fence**: the Quick Start bash fence contains exactly the two
+  commands the `validate-recipes` job's `run:` lines execute verbatim —
+  `cargo run --example validate_all` and `cargo run --example plan_all`.
+  Every other illustrative command (`plugin_lifecycle`,
+  `environment_promotion`, `compliance_audit`, `metric_snapshot`,
+  `make qualify-recipe`, `make update-qualifications`) is real and runnable
+  but is not asserted by CI on every PR, so it lives in a `text` fence
+  instead — a claim is decided by its fence's info token, never by its
+  content.
+- **No `uses:`-boundary gap here**: unlike paiml/whisper.apr#133 (CI entirely
+  delegated to a reusable workflow) and paiml/apr-cookbook#477 (a mix of a
+  delegated job and local jobs), this repo's `.github/workflows/ci.yml` has
+  no `uses:` delegation at all — every job's commands are declared directly
+  in this file, so `pv-readme`'s ci-step resolver reads them without a gap.
+- **Entrypoint**: `Cargo.toml`.
+- **Contract count**: `1` (`contracts/census.json`, this one shape file).
+- **Falsifier**: `tests/readme-shape-falsifier.sh`, 6 cases proving the check
+  can fail (an unrun claim, a dropped `kind:`, a missing entrypoint, a wrong
+  contract count) as well as pass.
+- **LAB, not GATE** (C324): `.github/workflows/readme-shape-lab.yml` runs
+  nightly plus `workflow_dispatch`, never on the PR path.
+
+Part of paiml/forjar-cookbook#34.
 
 ## License
 
