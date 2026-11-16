@@ -334,3 +334,57 @@ roadmap:
   - kind:docs
   notes: null
   epic: 25
+- id: PMAT-035
+  github_issue: 35
+  item_type: task
+  title: README SHACL shape + census (pv-readme)
+  status: planned
+  priority: medium
+  assigned_to: null
+  created: 2026-11-13T14:32:57Z
+  updated: 2026-11-13T14:32:57Z
+  spec: null
+  acceptance_criteria: []
+  phases: []
+  subtasks: []
+  estimated_effort: null
+  labels:
+  - kind:docs
+  notes: null
+  epic: 34
+- id: PMAT-036
+  github_issue: 36
+  item_type: task
+  title: 'README.md rewrite: frontmatter, fence triage, pv-readme Contract section'
+  status: planned
+  priority: medium
+  assigned_to: null
+  created: 2026-11-13T14:32:58Z
+  updated: 2026-11-13T14:32:58Z
+  spec: null
+  acceptance_criteria: []
+  phases: []
+  subtasks: []
+  estimated_effort: null
+  labels:
+  - kind:docs
+  notes: null
+  epic: 34
+- id: PMAT-037
+  github_issue: 37
+  item_type: task
+  title: readme-shape-falsifier.sh + readme-shape-lab.yml (LAB only)
+  status: planned
+  priority: medium
+  assigned_to: null
+  created: 2026-11-13T14:32:59Z
+  updated: 2026-11-13T14:32:59Z
+  spec: null
+  acceptance_criteria: []
+  phases: []
+  subtasks: []
+  estimated_effort: null
+  labels:
+  - kind:docs
+  notes: null
+  epic: 34
