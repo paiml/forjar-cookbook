@@ -79,36 +79,40 @@ jobs:
         env:
           NEEDS_JSON: ${{ toJSON(needs) }}
         run: |
-          python3 - <<'PY'
-          import json, os, re, sys
-
-          needs = json.loads(os.environ["NEEDS_JSON"])
-
-          # Denominator 1: this gate must depend on every other job in ci.yml.
-          text = open(".github/workflows/ci.yml").read()
-          _, _, jobs_section = text.partition("\njobs:\n")
-          if not jobs_section:
-              sys.exit("FAIL: could not locate the jobs: block in .github/workflows/ci.yml")
-          declared = {m.group(1) for m in re.finditer(r"^  ([A-Za-z0-9_-]+):", jobs_section, re.M)}
-          declared.discard("gate")
-          if not declared:
-              sys.exit("FAIL: parsed 0 jobs from .github/workflows/ci.yml")
-
-          aggregated = set(needs)
-          print(f"ci.yml declares {len(declared)} job(s) besides gate; gate aggregates {len(aggregated)}.")
-          missing = sorted(declared - aggregated)
-          unknown = sorted(aggregated - declared)
-          if missing:
-              sys.exit(f"FAIL: gate does not depend on {len(missing)} CI job(s): {', '.join(missing)}")
-          if unknown:
-              sys.exit(f"FAIL: gate depends on {len(unknown)} job(s) not in ci.yml: {', '.join(unknown)}")
-
-          # Denominator 2: every aggregated job must have actually succeeded.
-          for name, res in sorted(needs.items()):
-              print(f"  {name}: {res['result']}")
-          bad = sorted(n for n, r in needs.items() if r["result"] != "success")
-          if bad:
-              sys.exit(f"FAIL: {len(bad)} of {len(needs)} CI job(s) did not succeed: {', '.join(bad)}")
-
-          print(f"OK: {len(needs)} of {len(needs)} CI job(s) succeeded.")
-          PY
+          set -euo pipefail
+          # Aggregate CI job results. Same messages and exit codes as the earlier script.
+          text_jobs=$(awk 'f{print} /^jobs:$/{f=1}' .github/workflows/ci.yml)
+          if [ -z "$text_jobs" ]; then
+              echo "FAIL: could not locate the jobs: block in .github/workflows/ci.yml" >&2
+              exit 1
+          fi
+          declared=$(printf '%s\n' "$text_jobs" | grep -oE '^  [A-Za-z0-9_-]+:' | sed -E 's/^  //; s/:$//' | grep -v '^gate$' | LC_ALL=C sort -u || true)
+          if [ -z "$declared" ]; then
+              echo "FAIL: parsed 0 jobs from .github/workflows/ci.yml" >&2
+              exit 1
+          fi
+          aggregated=$(printf '%s' "$NEEDS_JSON" | jq -r 'keys[]' | LC_ALL=C sort -u)
+          n_declared=$(printf '%s\n' "$declared" | wc -l)
+          n_agg=$(printf '%s' "$NEEDS_JSON" | jq 'length')
+          echo "ci.yml declares ${n_declared} job(s) besides gate; gate aggregates ${n_agg}."
+          missing=$(comm -23 <(printf '%s\n' "$declared") <(printf '%s\n' "$aggregated") | paste -sd, - | sed 's/,/, /g')
+          unknown=$(comm -13 <(printf '%s\n' "$declared") <(printf '%s\n' "$aggregated") | paste -sd, - | sed 's/,/, /g')
+          if [ -n "$missing" ]; then
+              n=$(comm -23 <(printf '%s\n' "$declared") <(printf '%s\n' "$aggregated") | wc -l)
+              echo "FAIL: gate does not depend on ${n} CI job(s): ${missing}" >&2
+              exit 1
+          fi
+          if [ -n "$unknown" ]; then
+              n=$(comm -13 <(printf '%s\n' "$declared") <(printf '%s\n' "$aggregated") | wc -l)
+              echo "FAIL: gate depends on ${n} job(s) not in ci.yml: ${unknown}" >&2
+              exit 1
+          fi
+          printf '%s' "$NEEDS_JSON" | jq -r 'to_entries | sort_by(.key)[] | "  \(.key): \(.value.result)"'
+          total=$(printf '%s' "$NEEDS_JSON" | jq 'length')
+          bad=$(printf '%s' "$NEEDS_JSON" | jq -r 'to_entries | map(select(.value.result != "success")) | sort_by(.key)[] | .key' | paste -sd, - | sed 's/,/, /g')
+          if [ -n "$bad" ]; then
+              n=$(printf '%s' "$NEEDS_JSON" | jq '[to_entries[] | select(.value.result != "success")] | length')
+              echo "FAIL: ${n} of ${total} CI job(s) did not succeed: ${bad}" >&2
+              exit 1
+          fi
+          echo "OK: ${total} of ${total} CI job(s) succeeded."
